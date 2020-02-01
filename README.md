@@ -2,7 +2,7 @@
 
 A snake AI for Battlesnake 2020. Based off the Python starter snake.
 
-## Structure
+## File Structure
 
 - /app
   - server.py - uses the bottle web framework to serve requests and the gunicorn web server to run bottle on Heroku.
@@ -12,9 +12,8 @@ A snake AI for Battlesnake 2020. Based off the Python starter snake.
 - Procfile - tells Heroku how to run the app
 - requirements.txt - tells Heroku what dependencies to install
 - runtime.txt - tells Heroku which Python to use
-- README.md - this markdown file :)
 
-## How to Run
+## Instructions
 
 Running locally:
 

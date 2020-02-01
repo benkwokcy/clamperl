@@ -1,47 +1,37 @@
 import copy
+import heapq
+from typing import List
 
 from app import structures
 
 def getMove(data):
-    """
-    Goals:
-        - eat food / a*
-        - kill other snakes
-        - chase tail / defense
-    """
     game = structures.Game(data)
 
-    # if game.me.health < 50:
-    #     return eat()
-    # else:
+    # HUNGRY - try to eat
+    if game.me.health < 50:
+        move = eat(game)
+        if move:
+            return move
 
-    safeMoves = sorted(game.getSafeMoves(game.me.head), key=lambda p: getAreaSize(game, p))
+    # DEFENSIVE - go to the safest location
+    moves = game.getMoves(game.me.head, structures.Mood.ALL)
+    if moves:
+        return game.directionFromHead(moves[0])
 
-    if safeMoves:
-        return game.directionFromHead(safeMoves[-1])
-    else:
-        print("No safe moves!")
-        return "up"
+    # RANDOM - should not reach here
+    print("No valid moves in board. Should only happen in a 1x1 board.")
+    return structures.randomDirection()
 
-# used to move towards the bigger area so you don't get stuck
-# TODO: don't run function if points in same area
-def getAreaSize(game: structures.Game, p: structures.Point):
-    visited = set([p.tup])
+# takes riskier routes if eating is more urgent
+def eat(game):
+    mood = structures.Mood.AGGRESSIVE if game.me.health > 25 else structures.Mood.RISKY
 
-    def bfs(point: structures.Point):
-        if not game.isSafe(point):
-            return
+    while game.food:
+        _, point = heapq.heappop(game.food)
+        move, length = game.aStar(point, mood)
+        if length != -1:
+            return move
 
-        for neighbour in game.getSafeMoves(point):
-            if neighbour.tup not in visited:
-                visited.add(neighbour.tup)
-                bfs(neighbour)
-    
-    return len(visited)
+    return None
 
-# def eat():
-#     # a* towards the closest food
-#     pass
 
-# def a_star(game: Game):
-#     pass
