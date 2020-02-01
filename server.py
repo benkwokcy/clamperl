@@ -5,7 +5,7 @@ import snake
 # Not used
 @bottle.route('/')
 def index():
-    return "Available endpoints: /start, /end, /move, /ping"
+    return "Available endpoints: /start /end /move /ping"
 
 # The engine is asking your snake if it is alive
 @bottle.post('/ping')
@@ -57,3 +57,4 @@ if __name__ == '__main__':
         port = os.getenv('PORT', '8080'),
         debug = os.getenv('DEBUG', True)
     )
+    print(f"huntail is running on port {os.getenv('PORT', '8080')}")

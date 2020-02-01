@@ -41,7 +41,7 @@ class Game:
     def __init__(self, data: dict):
         self.height = data["board"]["height"]
         self.width = data["board"]["width"]
-        self.board = [[State.EMPTY * self.width] for _ in range(self.height)]
+        self.board = [[State.EMPTY] * self.width for _ in range(self.height)]
 
         self.me = Snake(data["you"])
         self.enemies = [Snake(d) for d in data["board"]["snakes"]]
