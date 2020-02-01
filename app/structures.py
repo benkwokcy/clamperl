@@ -89,7 +89,7 @@ class Game:
 
     # see if you would die at a given point
     def isSafe(self, point: Point) -> bool:
-        if not (point.x < self.width and 0 <= point.y < self.height):
+        if not (0 <= point.x < self.width and 0 <= point.y < self.height):
             return False
 
         return self.getState(point) in (State.EMPTY, State.FOOD)
