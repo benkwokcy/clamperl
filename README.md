@@ -7,13 +7,11 @@ A snake AI for Battlesnake 2020. Based off the Python starter snake, which uses 
 Running locally:
 
 ```bash
-python server.py
+python app/server.py
 ```
 
 Deploying to Heroku:
 
 ```bash
 git push heroku master
-heroku open
-heroku logs --tail # view server logs
 ```

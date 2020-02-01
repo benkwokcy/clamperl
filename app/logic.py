@@ -1,6 +1,6 @@
 import enum, collections
-from app import classes
+from app import structures
 
 def get_move(data):
-    game = classes.Game(data)
+    game = structures.Game(data)
     return game.getSafeMoves()[0]
