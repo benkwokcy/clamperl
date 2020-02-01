@@ -1,7 +1,6 @@
 import copy
 
 from app import structures
-from structures import *
 
 def getMove(data):
     """
@@ -10,7 +9,7 @@ def getMove(data):
         - kill other snakes
         - chase tail / defense
     """
-    game = Game(data)
+    game = structures.Game(data)
 
     # if game.me.health < 50:
     #     return eat()
@@ -26,15 +25,12 @@ def getMove(data):
 
 # used to move towards the bigger area so you don't get stuck
 # TODO: don't run function if points in same area
-def getAreaSize(g: Game, p: Point):
-    game = copy.deepcopy(g)
+def getAreaSize(game: structures.Game, p: structures.Point):
     visited = set([p.tup])
 
-    def bfs(point: Point):
+    def bfs(point: structures.Point):
         if not game.isSafe(point):
             return
-        
-        game.setState(point, State.ENEMY)
 
         for neighbour in game.getSafeMoves(point):
             if neighbour.tup not in visited:
