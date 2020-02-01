@@ -12,7 +12,7 @@ python server.py
 
 Deploying to Heroku:
 
-```
+```bash
 git push heroku master
 heroku open
 heroku logs --tail # view server logs

@@ -1,6 +1,10 @@
-import json, os
+import json
+import os
+
 import bottle
-import snake
+
+import app
+from app import snake
 
 # Not used
 @bottle.route('/')
