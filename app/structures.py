@@ -31,6 +31,7 @@ class Point:
     def right(self):
         return Point({"x": self.x+1, "y": self.y})
 
+    # all possible moves from current point
     def allMoves(self):
         return (
             Point({"x": self.x, "y": self.y-1}),
@@ -39,9 +40,11 @@ class Point:
             Point({"x": self.x+1, "y": self.y})
         )
     
+    # manhattan distance between this point and another point
     def distance(self, other):
         return abs(self.x - other.x) + abs(self.y - other.y)
     
+    # overriding the print() representation
     def __str__(self):
         return str(self.tup)
 
@@ -72,10 +75,6 @@ class Game:
                 point = Point(coordinates)
                 self.setState(point, State.ENEMY)
     
-    # get all safe moves from a point
-    def getSafeMoves(self, point: Point) -> List[Point]:
-        return [m for m in point.allMoves() if self.isSafe(m)]
-
     # set a state at a point
     def setState(self, point: Point, state: State):
         self.board[point.y][point.x] = state
@@ -84,16 +83,19 @@ class Game:
     def getState(self, point: Point) -> State:
         return self.board[point.y][point.x]
     
-    # see if a point is inside the board
-    def inBounds(self, point: Point) -> bool:
-        return 0 <= point.x < self.width and 0 <= point.y < self.height
-    
+    # get all safe moves from a point
+    def getSafeMoves(self, point: Point) -> List[Point]:
+        return [m for m in point.allMoves() if self.isSafe(m)]
+
     # see if you would die at a given point
     def isSafe(self, point: Point) -> bool:
-        return self.inBounds(point) and self.getState(point) in (State.EMPTY, State.FOOD)
+        if not (point.x < self.width and 0 <= point.y < self.height):
+            return False
 
-    # given a valid move from the head, return its state type
-    def directionFromHead(self, point: Point) -> State:
+        return self.getState(point) in (State.EMPTY, State.FOOD)
+
+    # given a valid move from the head, return its Direction type
+    def directionFromHead(self, point: Point) -> Direction:
         head = self.me.head
         directions = {
             (head.x, head.y-1): Direction.UP,

@@ -20,6 +20,7 @@ def getMove(data):
     if safeMoves:
         return game.directionFromHead(safeMoves[-1])
     else:
+        print("No safe moves!")
         return "up"
 
 # used to move towards the bigger area so you don't get stuck
