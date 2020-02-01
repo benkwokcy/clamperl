@@ -3,7 +3,7 @@ import os
 
 import bottle
 
-from app import logic
+from logic import get_move
 
 # Not used
 @bottle.route('/')
@@ -34,7 +34,7 @@ def start():
 @bottle.post('/move')
 def move():
     data = bottle.request.json
-    direction = logic.get_move(data)
+    direction = get_move(data)
 
     return bottle.HTTPResponse(
         status = 200,
