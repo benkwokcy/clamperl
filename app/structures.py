@@ -1,5 +1,5 @@
 from enum import Enum
-from collections import namedtuple
+from typing import List
 
 class Direction:
     UP = "up"
@@ -17,6 +17,7 @@ class Point:
     def __init__(self, data):
         self.x = data["x"]
         self.y = data["y"]
+        self.tup = (self.x, self.y)
 
     def up(self):
         return Point({"x": self.x, "y": self.y-1})
@@ -29,6 +30,20 @@ class Point:
 
     def right(self):
         return Point({"x": self.x+1, "y": self.y})
+
+    def allMoves(self):
+        return (
+            Point({"x": self.x, "y": self.y-1}),
+            Point({"x": self.x, "y": self.y+1}),
+            Point({"x": self.x-1, "y": self.y}),
+            Point({"x": self.x+1, "y": self.y})
+        )
+    
+    def distance(self, other):
+        return abs(self.x - other.x) + abs(self.y - other.y)
+    
+    def __str__(self):
+        return str(self.tup)
 
 class Snake:
     def __init__(self, data: dict):
@@ -57,11 +72,9 @@ class Game:
                 point = Point(coordinates)
                 self.setState(point, State.ENEMY)
     
-    def getSafeMoves(self):
-        moves = (self.me.head.up(), self.me.head.down(), self.me.head.left(), self.me.head.right())
-        directions = (Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT)
-
-        return [direction for move, direction in zip(moves, directions) if self.isSafe(move)]
+    # get all safe moves from a point
+    def getSafeMoves(self, point: Point) -> List[Point]:
+        return [m for m in point.allMoves() if self.isSafe(m)]
 
     # set a state at a point
     def setState(self, point: Point, state: State):
@@ -78,3 +91,17 @@ class Game:
     # see if you would die at a given point
     def isSafe(self, point: Point) -> bool:
         return self.inBounds(point) and self.getState(point) in (State.EMPTY, State.FOOD)
+
+    # given a valid move from the head, return its state type
+    def directionFromHead(self, point: Point) -> State:
+        head = self.me.head
+        directions = {
+            (head.x, head.y-1): Direction.UP,
+            (head.x, head.y+1): Direction.DOWN,
+            (head.x-1, head.y): Direction.LEFT,
+            (head.x+1, head.y): Direction.RIGHT,
+        }
+
+        assert (point.tup in directions), "Point wasn't a valid move from head."
+
+        return directions[point.tup]
