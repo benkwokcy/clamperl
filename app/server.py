@@ -3,7 +3,7 @@ import os
 
 import bottle
 
-import logic
+from app import logic
 
 # Not used
 @bottle.route('/')

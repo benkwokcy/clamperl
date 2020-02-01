@@ -1,5 +1,6 @@
 import copy
 
+from app import structures
 from structures import *
 
 def getMove(data):
@@ -24,6 +25,7 @@ def getMove(data):
         return "up"
 
 # used to move towards the bigger area so you don't get stuck
+# TODO: don't run function if points in same area
 def getAreaSize(g: Game, p: Point):
     game = copy.deepcopy(g)
     visited = set([p.tup])
@@ -41,9 +43,9 @@ def getAreaSize(g: Game, p: Point):
     
     return len(visited)
 
-def eat():
-    # a* towards the closest food
-    pass
+# def eat():
+#     # a* towards the closest food
+#     pass
 
-def a_star(game: Game):
-    pass
+# def a_star(game: Game):
+#     pass
