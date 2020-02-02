@@ -16,6 +16,19 @@ def randomDirection():
     """Use this if we're going to die no matter what."""
     return random.choice([d.value for d in Direction])
 
+class Mood(Enum):
+    """Sets the maximum riskiness allowed by getMoves.
+    
+    This allows us to easily configure the behavior of the snake.
+    Anywhere you see mood as a parameter, you can modify it to make
+    the snake act safer or riskier.
+    """
+    SAFE = 1 # no chance of death
+    AGGRESSIVE = 2 # no chance of death, could kill another snake
+    RISKY = 3 # could die while killing another snake
+    SUICIDAL = 4 # could die
+    ALL = 5 # definitely die
+
 class State(Enum):
     """Each position on the game board is given one of these states."""
     SELF_TAIL = 1
@@ -53,19 +66,6 @@ def getRisk(state: State) -> int:
 
     return risk[state]
 
-class Mood(Enum):
-    """Sets the maximum riskiness allowed by getMoves.
-    
-    This allows us to easily configure the behavior of the snake.
-    Anywhere you see mood as a parameter, you can modify it to make
-    the snake act safer or riskier.
-    """
-    SAFE = 1 # no chance of death
-    AGGRESSIVE = 2 # no chance of death, could kill another snake
-    RISKY = 3 # could die while killing another snake
-    SUICIDAL = 4 # could die
-    ALL = 5 # definitely die
-
 class Point:
     """A 2D point representing a position on the game board."""
     def __init__(self, data):
@@ -87,12 +87,15 @@ class Point:
 
     def allMoves(self):
         """Returns points for up, down, left, right."""
-        return (
+        moves = [
             Point({"x": self.x, "y": self.y-1}),
             Point({"x": self.x, "y": self.y+1}),
             Point({"x": self.x-1, "y": self.y}),
             Point({"x": self.x+1, "y": self.y})
-        )
+        ]
+        random.shuffle(moves) # snake tends to move in the same pattern if we don't randomize
+
+        return moves
     
     def distance(self, other):
         """Manhattan distance between this point and another point."""
