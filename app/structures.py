@@ -140,12 +140,6 @@ class Game:
         self.food = [] # minheap of food with distance as key
         self.uf = None # union find of connected areas on the board
 
-        # food
-        for coordinates in data["board"]["food"]:
-            point = Point(coordinates)
-            self.setState(point, State.FOOD)
-            heapq.heappush(self.food, (point.distance(self.me.head), point))
-
         # myself
         self.setState(self.me.head, State.SELF_BODY)
         self.setStates(self.me.middle, State.SELF_BODY)
@@ -169,8 +163,15 @@ class Game:
         for row in range(self.height):
             for col in range(self.width):
                 p = Point({"x": col, "y": row})
-                for neighbour in self.getMoves(p, Mood.ALL): # CONFIGUREABLE
+                for neighbour in self.getMoves(p, Mood.SUICIDAL):
                     self.uf.union(p, neighbour)
+
+        # food
+        for coordinates in data["board"]["food"]:
+            point = Point(coordinates)
+            self.setState(point, State.FOOD)
+            if self.uf.connected(self.me.head, point): # only push accessible food
+                heapq.heappush(self.food, (point.distance(self.me.head), point))
 
     def setState(self, point: Point, state: State):
         """Set a state at a point, if the risk is higher or the point is empty."""
