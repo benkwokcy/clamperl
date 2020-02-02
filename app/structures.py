@@ -1,39 +1,35 @@
+"""Data structures used by logic.py"""
+
 import heapq
 from enum import Enum
 from typing import List
 import random
 
-# maximum riskiness allowed by getMoves()
-class Mood(Enum):
-    SAFE = 1
-    AGGRESSIVE = 2
-    RISKY = 3
-    SUICIDAL = 4
-    ALL = 5
-
-# /move endpoint expects a lowercase string of this form
 class Direction:
+    """The /move endpoint expects a string of this form."""
     UP = "up"
     DOWN = "down"
     LEFT = "left"
     RIGHT = "right"
 
 def randomDirection():
+    """Use this if we're going to die no matter what."""
     return random.choice(list(Direction))
 
 class State(Enum):
+    """Each position on the game board is given one of these states."""
     SELF_TAIL = 1
     EMPTY = 2
     FOOD = 3
     ENEMY_TAIL = 4
     ENEMY_HEAD_AREA_WEAK = 5
-    ENEMY_HEAD_AREA_STRONG = 6,
-    ENEMY_HEAD = 7
+    ENEMY_HEAD_AREA_EQUAL = 6
+    ENEMY_HEAD_AREA_STRONG = 7
     SELF_BODY = 8
     ENEMY_BODY = 9
 
-# allows me to rank moves by riskiness
 def getRisk(state: State) -> int:
+    """Allows me to rank moves by the danger level of their states."""
     risk = {
         # SUPER SAFE
         State.SELF_TAIL: 0,
@@ -43,21 +39,35 @@ def getRisk(state: State) -> int:
         State.EMPTY: 1,
         State.FOOD: 1,
         
-        # ARGUEABLE
-        State.ENEMY_HEAD_AREA_WEAK: 2, # can modify this to change aggressiveness
+        # ARGUEABLE - can modify this to change aggressiveness
+        State.ENEMY_HEAD_AREA_WEAK: 2, # a point reachable by an enemy head who's length is less than ours
 
         # POSSIBLE DEATH
-        State.ENEMY_HEAD_AREA_STRONG: 3,
+        State.ENEMY_HEAD_AREA_EQUAL: 3, # a point reachable by an enemy head who's length is greater than or equal to ours
+        State.ENEMY_HEAD_AREA_STRONG: 4, # a point reachable by an enemy head who's length is greater than ours
 
         # DEFINITE DEATH
-        State.ENEMY_HEAD: 4, # could take them out with me
         State.ENEMY_BODY: 5,
         State.SELF_BODY: 5,
     }
 
     return risk[state]
 
+class Mood(Enum):
+    """Sets the maximum riskiness allowed by getMoves.
+    
+    This allows us to easily configure the behavior of the snake.
+    Anywhere you see mood as a parameter, you can modify it to make
+    the snake act safer or riskier.
+    """
+    SAFE = 1 # no chance of death
+    AGGRESSIVE = 2 # no chance of death, could kill another snake
+    RISKY = 3 # could die while killing another snake
+    SUICIDAL = 4 # could die
+    ALL = 5 # definitely die
+
 class Point:
+    """A 2D point representing a position on the game board."""
     def __init__(self, data):
         self.x = data["x"]
         self.y = data["y"]
@@ -75,8 +85,8 @@ class Point:
     def right(self):
         return Point({"x": self.x+1, "y": self.y})
 
-    # all possible moves from current point
     def allMoves(self):
+        """Returns points for up, down, left, right."""
         return (
             Point({"x": self.x, "y": self.y-1}),
             Point({"x": self.x, "y": self.y+1}),
@@ -84,19 +94,24 @@ class Point:
             Point({"x": self.x+1, "y": self.y})
         )
     
-    # manhattan distance between this point and another point
     def distance(self, other):
+        """Manhattan distance between this point and another point."""
         return abs(self.x - other.x) + abs(self.y - other.y)
     
-    # overriding the print() representation
     def __str__(self):
+        """Overrides the print representation."""
         return str(self.tup)
     
     def __eq__(self, other):
+        """Override equality."""
         if type(other) is type(self):
             return self.tup == other.tup
         else:
             return False
+    
+    def __hash__(self):
+        """Since we override equality, we need to ensure equivalent objects have identical hashes."""
+        return hash(self.tup)
 
 class Snake:
     def __init__(self, data: dict):
@@ -107,11 +122,11 @@ class Snake:
         self.size = len(data["body"])
         self.health = data["health"]
 
-    # can kill another snake who is smaller
-    def canKill(self, other):
-        return self.size > other.size
-
 class Game:
+    """Contains the game board and all objects on the board.
+
+    This is the main data structure for making decisions about the game.
+    """
     def __init__(self, data: dict):
         self.height = data["board"]["height"]
         self.width = data["board"]["width"]
@@ -135,11 +150,13 @@ class Game:
         # enemies
         for enemy in self.enemies:
             for move in enemy.head.allMoves():
-                if self.me.canKill(enemy):
+                if self.me.size > enemy.size:
                     self.setState(move, State.ENEMY_HEAD_AREA_WEAK)
+                elif self.me.size == enemy.size:
+                    self.setState(move, State.ENEMY_HEAD_AREA_EQUAL)
                 else:
                     self.setState(move, State.ENEMY_HEAD_AREA_STRONG)
-            self.setState(enemy.head, State.ENEMY_HEAD)
+            self.setState(enemy.head, State.ENEMY_BODY)
             self.setStates(enemy.middle, State.ENEMY_BODY)
             self.setState(enemy.tail, State.ENEMY_TAIL)
 
@@ -148,36 +165,41 @@ class Game:
         for row in range(self.height):
             for col in range(self.width):
                 p = Point({"x": col, "y": row})
-                for neighbour in self.getMoves(p):
+                for neighbour in self.getMoves(p, Mood.SAFE): # configure mood to adjust riskiness
                     self.uf.union(p, neighbour)
 
-    # set a state at a point, if the risk is higher or the point is empty
     def setState(self, point: Point, state: State):
+        """Set a state at a point, if the risk is higher or the point is empty."""
         boardState = self.board[point.y][point.x]
         if boardState == State.EMPTY or getRisk(state) > getRisk(self.board[point.y][point.x]):
             self.board[point.y][point.x] = state
 
-    # same as setState but takes a list of points    
     def setStates(self, points, state):
+        """Same as setState but takes a list of points."""
         for point in points:
             self.setState(point, state)
 
-    # get state from a point
     def getState(self, point: Point) -> State:
+        """Get state from a point on the board."""
         return self.board[point.y][point.x]
     
-    # get all valid moves from a point, sorted by increasing risk and decreasing area size, where risk is capped by mood
     def getMoves(self, point: Point, mood: Mood) -> List[Point]:
-        moves = [m for m in point.allMoves() if self.isValid(m) and self.getRisk(m) <= mood.value]
+        """Get all valid moves from a point.
+        
+        Moves are sorted by increasing risk and decreasing area size
+        Risk is capped by mood.
+        """
+        moves = [m for m in point.allMoves() if self.isValid(m) and getRisk(m) <= mood.value]
         moves.sort(key = lambda m: (getRisk(self.getState(m)), -self.uf.getSize(m)))
 
         return moves
 
     def isValid(self, point: Point) -> bool:
+        """Check if a point is within the game board boundaries."""
         return 0 <= point.x < self.width and 0 <= point.y < self.height
 
-    # given a valid move from the head, return its Direction type
     def directionFromHead(self, point: Point) -> Direction:
+        """Given a valid move from the head, return its direction."""
         head = self.me.head
         directions = {
             (head.x, head.y-1): Direction.UP,
@@ -190,28 +212,37 @@ class Game:
 
         return directions[point.tup]
 
-    # A* algorithm - find the shortest path to move towards a destination from the head
-    # and return the first move and the length of the path
     def aStar(self, dest: Point, mood: Mood) -> (Direction, int):
+        """A* Algorithm.
+        
+        Figures out the shortest path to a destination from the head.
+        Heuristic is the manhattan distance to the destination point.
+        Returns the first move of that path and the length of the path.
+        """
         head = self.me.head
         heap = [(dest.distance(head), head)]
-        pathCost = {head.tup: 0}
-        parent = {head.tup: head.tup}
+        pathCost = {head.tup: 0} # path cost so far from destination
+        parent = {head: head} # the point preceding another point in the path
 
         while heap:
             move,_ = heapq.heappop(heap)
             if move == dest:
-                parent[dest.tup] = move.tup
+                parent[dest] = move
                 path = self.getPath(parent, dest)
-                return (self.directionFromHead(path[0]), len(path))
+                return self.directionFromHead(path[0]), len(path)
             for neighbour in self.getMoves(move, mood):
-                # TODO - use this to move to the food
+                if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
+                    parent[neighbour] = move
+                    pathCost[neighbour.tup] = pathCost[move.tup] + 1
+                    heapq.heappush((pathCost[neighbour.tup] + dest.distance(neighbour), neighbour))
 
-        return (randomDirection(), -1) # if unreachable,
+        return None, -1 # if unreachable
 
-    # reconstruct shortest path from parent array for A*
-    # path returned does not include the source
-    def getPath(self, parent, dest):
+    def getPath(self, parent: Point, dest: Point) -> List[Point]:
+        """Reconstruct path from a parent pointer array.
+        
+        Path returned does not include the source.
+        """
         path = []
 
         p = dest
@@ -223,11 +254,14 @@ class Game:
 
         return path[::-1]
 
-# Weighted UnionFind
-# all the functions take in Point objects for convenience
-# however the id and size lists are indexed by int indices (see getIndex())
-# TODO: Path compression
 class UnionFind:
+    """Weighted UnionFind.
+
+    All the functions take in Point objects for convenience.
+    The id and size lists are indexed by int indices.
+    
+    TODO: Path compression
+    """
     def __init__(self, board: List[List[State]]):
         self.height = len(board)
         self.width = len(board[0])
