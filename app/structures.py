@@ -166,7 +166,7 @@ class Game:
         for row in range(self.height):
             for col in range(self.width):
                 p = Point({"x": col, "y": row})
-                for neighbour in self.getMoves(p, Mood.SAFE): # configure mood to adjust riskiness
+                for neighbour in self.getMoves(p, Mood.ALL): # CONFIGUREABLE
                     self.uf.union(p, neighbour)
 
     def setState(self, point: Point, state: State):
@@ -222,7 +222,7 @@ class Game:
         parent = {head: head} # the point preceding another point in the path
 
         while heap:
-            move,_ = heapq.heappop(heap)
+            _, move = heapq.heappop(heap)
             if move == dest:
                 parent[dest] = move
                 return self.getPath(parent, dest)
