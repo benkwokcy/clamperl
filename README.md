@@ -4,8 +4,9 @@ A snake AI for Battlesnake 2020. Based off the Python starter snake.
 
 ## File Structure
 
+- server.py - launch web server
+- tests.py - run unit tests
 - /app
-  - server.py - uses the bottle web framework to serve requests and the gunicorn web server to run bottle on Heroku.
   - logic.py - logic for calculating moves
   - structures.py - data structures for calculating moves
 - app.json - tell Heroku some random details
@@ -18,7 +19,13 @@ A snake AI for Battlesnake 2020. Based off the Python starter snake.
 Running locally:
 
 ```bash
-python app/server.py
+python3 server.py
+```
+
+Running tests:
+
+```bash
+python3 test.py
 ```
 
 Deploying to Heroku:

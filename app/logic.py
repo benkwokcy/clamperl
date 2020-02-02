@@ -3,7 +3,7 @@
 import heapq
 from typing import List
 
-from structures import Mood, Game, Direction, Point, randomDirection
+from app.structures import Mood, Game, Direction, Point, randomDirection
 
 def getMove(data) -> Direction:
     """Parent function for deciding the next move."""
