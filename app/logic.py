@@ -5,28 +5,25 @@ from typing import List
 
 from app import structures
 
-def getMove(data) -> structures.Direction:
+def getMove(data: dict) -> structures.Direction:
     """Parent function for deciding the next move."""
     game = structures.Game(data)
 
-    # HUNGRY - try to eat if health dips below a threshold
+    # Eat when food dips below threshold.
     if game.me.health < 50:
         move = eat(game)
         if move:
-            return game.directionFromHead(move)
+            return move
 
-    # DEFENSIVE - go to the safest location
-    moves = game.getMoves(game.me.head, structures.Mood.ALL)
-    # Sort moves by increasing risk and decreasing connected area size
-    moves.sort(key = lambda m: (structures.getRisk(game.getState(m)), -game.uf.getSize(m)))
-    if moves:
-        return game.directionFromHead(moves[0])
+    # Take the safest move.
+    move = defend(game)
+    if move:
+        return move
 
-    # RANDOM - should not reach here
-    print("No valid moves in board. Should only happen in a 1x1 board.")
+    # No moves where we survive.
     return structures.randomDirection()
 
-def eat(game) -> structures.Point:
+def eat(game: structures.Game) -> str:
     """Move towards food.
 
     Takes riskier paths to the food if it is urgent.
@@ -37,8 +34,18 @@ def eat(game) -> structures.Point:
         _, _, point = heapq.heappop(game.food)
         path = game.aStar(point, mood)
         if path:
-            return path[0]
+            return game.directionFromHead(path[0])
 
     return None
 
+def defend(game: structures.Game) -> str:
+    """Go to the safest location."""
+    moves = game.getMoves(game.me.head, structures.Mood.SUICIDAL)
 
+    if not moves:
+        return None
+
+    key = lambda m: (structures.getRisk(game.getState(m)), -game.uf.getSize(m)) # lowest risk, biggest area
+    bestMove = min(moves, key=key) 
+
+    return game.directionFromHead(bestMove)
