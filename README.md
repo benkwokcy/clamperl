@@ -39,6 +39,6 @@ git push heroku
 ## To Do
 
 - Avoid food that other snakes are closer to?
-- Avoid other snake's tails when they might eat food
+- Avoid other snake's tails who just ate food
 - Try a few moves into the future and pick the best one
   - Parallelize these computations

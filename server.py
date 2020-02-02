@@ -1,4 +1,4 @@
-"""Bottle/Gunicorn web server implementing the Battlesnake 2020 API."""
+"""Bottle/Cheroot web server implementing the Battlesnake 2020 API."""
 
 import json
 import os
@@ -7,15 +7,6 @@ import bottle
 from cheroot import wsgi
 
 from app.logic import getMove
-
-class CherryPyServer(bottle.ServerAdapter):
-    """Credit to Jon Knoll for the suggestion to use CherryPy."""
-    def run(self, handler):
-        server = wsgi.Server((self.host, self.port), handler)
-        try:
-            server.start()
-        finally:
-            server.stop()
 
 @bottle.post('/start')
 def start():
@@ -62,6 +53,15 @@ def ping():
 def index():
     """Not used by the game server."""
     return "Available endpoints: /start /end /move /ping"
+
+class CherryPyServer(bottle.ServerAdapter):
+    """Credit to Jon Knoll for the suggestion to use CherryPy."""
+    def run(self, handler):
+        server = wsgi.Server((self.host, self.port), handler)
+        try:
+            server.start()
+        finally:
+            server.stop()
 
 application = bottle.default_app() # this is needed by gunicorn for some reason
 
