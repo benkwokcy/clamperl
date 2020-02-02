@@ -26,7 +26,3 @@ Deploying to Heroku:
 ```bash
 git push heroku master
 ```
-
-## Issues
-
-1. "from app import logic" vs "import logic". The first way works on Heroku but not locally. The second way works locally but not on Heroku.
