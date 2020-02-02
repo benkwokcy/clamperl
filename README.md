@@ -31,5 +31,5 @@ python3 test.py
 Deploying to Heroku:
 
 ```bash
-git push heroku master
+git push heroku
 ```
