@@ -50,7 +50,13 @@ def defend(game: structures.Game) -> str:
     if not moves:
         return None
 
-    key = lambda m: (structures.getRisk(game.getState(m)), -game.uf.getSize(m)) # lowest risk, biggest area
+    # we want a low risk move in big area
+    def key(p: structures.Point) -> int:
+        nonlocal game
+        risk = structures.getRisk(game.getState(p))
+        normalizedAreaSize = game.uf.getSize(p) / (game.height * game.width)
+        return risk - normalizedAreaSize
+
     bestMove = min(moves, key=key) 
 
     return game.directionFromHead(bestMove)
