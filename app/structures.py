@@ -109,6 +109,10 @@ class Point:
         else:
             return False
     
+    def __lt__(self, other):
+        """Needed to break ties in heapq"""
+        return sum(self.tup) < sum(other.tup)
+    
     def __hash__(self):
         """Since we override equality, we need to ensure equivalent objects have identical hashes."""
         return hash(self.tup)
@@ -137,11 +141,10 @@ class Game:
         self.uf = None # union find of connected areas on the board
 
         # food
-        for index, coordinates in enumerate(data["board"]["food"]):
+        for coordinates in data["board"]["food"]:
             point = Point(coordinates)
             self.setState(point, State.FOOD)
-            # we need the index to break ties for equal distances
-            heapq.heappush(self.food, (point.distance(self.me.head), index, point))
+            heapq.heappush(self.food, (point.distance(self.me.head), point))
 
         # myself
         self.setState(self.me.head, State.SELF_BODY)
@@ -230,7 +233,7 @@ class Game:
                 if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
                     parent[neighbour] = move
                     pathCost[neighbour.tup] = pathCost[move.tup] + 1
-                    heapq.heappush((pathCost[neighbour.tup] + dest.distance(neighbour), neighbour))
+                    heapq.heappush(heap, (pathCost[neighbour.tup] + dest.distance(neighbour), neighbour))
 
         return None
 
