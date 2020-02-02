@@ -11,11 +11,11 @@ def getMove(data: dict) -> structures.Direction:
 
     # Eat when food dips below threshold.
     if game.me.health < 50:
-        print(f"My health is {game.me.health}, time to try to eat!")
         move = eat(game)
         if move:
             print(f"Eat - {move}")
             return move
+        print("Tried to eat but failed.")
 
     # Take the safest move.
     move = defend(game)
@@ -38,11 +38,8 @@ def eat(game: structures.Game) -> str:
     while game.food:
         _, point = heapq.heappop(game.food)
         path = game.aStar(point, mood)
-        print(f"Looking at food at {path[0]}")
         if path:
-            print(f"Going for it! {path[0]}")
             return game.directionFromHead(path[0])
-        print("Food was not accessible")
 
     return None
 
