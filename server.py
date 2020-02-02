@@ -4,8 +4,18 @@ import json
 import os
 
 import bottle
+from cheroot import wsgi
 
 from app.logic import getMove
+
+class CherryPyServer(bottle.ServerAdapter):
+    """Credit to Jon Knoll for the suggestion to use CherryPy."""
+    def run(self, handler):
+        server = wsgi.Server((self.host, self.port), handler)
+        try:
+            server.start()
+        finally:
+            server.stop()
 
 @bottle.post('/start')
 def start():
@@ -60,6 +70,7 @@ if __name__ == '__main__':
         application,
         host = os.getenv('IP', '0.0.0.0'),
         port = os.getenv('PORT', '8080'),
-        debug = os.getenv('DEBUG', True)
+        debug = os.getenv('DEBUG', True),
+        server = CherryPyServer
     )
     print(f"huntail is running on port {os.getenv('PORT', '8080')}")
