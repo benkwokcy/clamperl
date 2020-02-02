@@ -163,8 +163,9 @@ class Game:
         for row in range(self.height):
             for col in range(self.width):
                 p = Point({"x": col, "y": row})
-                for neighbour in self.getMoves(p, Mood.SUICIDAL):
-                    self.uf.union(p, neighbour)
+                if p == self.me.head or getRisk(self.getState(p)) <= Mood.SUICIDAL.value: 
+                    for neighbour in self.getMoves(p, Mood.SUICIDAL):
+                        self.uf.union(p, neighbour)
 
         # food
         for coordinates in data["board"]["food"]:
@@ -228,7 +229,6 @@ class Game:
         while heap:
             _, move = heapq.heappop(heap)
             if move == dest:
-                parent[dest] = move
                 return self.getPath(parent, dest)
             for neighbour in self.getMoves(move, mood):
                 if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
