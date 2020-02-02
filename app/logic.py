@@ -34,7 +34,7 @@ def eat(game) -> structures.Point:
     mood = structures.Mood.AGGRESSIVE if game.me.health > 25 else structures.Mood.RISKY
 
     while game.food:
-        _, point = heapq.heappop(game.food)
+        _, _, point = heapq.heappop(game.food)
         path = game.aStar(point, mood)
         if path:
             return path[0]
