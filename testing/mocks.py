@@ -77,3 +77,53 @@ moveUp = {
     ]
   }
 }
+
+eatUp = {
+  "board": {
+    "height": 3,
+    "width": 1,
+    "food": [
+      {
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "snakes": []
+  },
+  "you": {
+    "id": "",
+    "name": "testsnake",
+    "health": 40,
+    "body": [
+      {
+        "x": 0,
+        "y": 1
+      }
+    ]
+  }
+}
+
+eatDown = {
+  "board": {
+    "height": 3,
+    "width": 1,
+    "food": [
+      {
+        "x": 0,
+        "y": 2
+      }
+    ],
+    "snakes": []
+  },
+  "you": {
+    "id": "",
+    "name": "testsnake",
+    "health": 40,
+    "body": [
+      {
+        "x": 0,
+        "y": 1
+      }
+    ]
+  }
+}
