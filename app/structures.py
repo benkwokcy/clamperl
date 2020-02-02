@@ -137,10 +137,11 @@ class Game:
         self.uf = None # union find of connected areas on the board
 
         # food
-        for coordinates in data["board"]["food"]:
+        for index, coordinates in enumerate(data["board"]["food"]):
             point = Point(coordinates)
             self.setState(point, State.FOOD)
-            heapq.heappush(self.food, (point.distance(self.me.head), point))
+            # we need the index to break ties for equal distances
+            heapq.heappush(self.food, (point.distance(self.me.head), index, point))
 
         # myself
         self.setState(self.me.head, State.SELF_BODY)
