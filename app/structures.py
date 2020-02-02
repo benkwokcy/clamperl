@@ -136,7 +136,7 @@ class Game:
         self.width = data["board"]["width"]
         self.board = [[State.EMPTY] * self.width for _ in range(self.height)]
         self.me = Snake(data["you"])
-        self.enemies = [Snake(d) for d in data["board"]["snakes"]]
+        self.enemies = [Snake(d) for d in data["board"]["snakes"]] 
         self.food = [] # minheap of food with distance as key
         self.uf = None # union find of connected areas on the board
 
@@ -163,16 +163,21 @@ class Game:
         for row in range(self.height):
             for col in range(self.width):
                 p = Point({"x": col, "y": row})
-                if p == self.me.head or getRisk(self.getState(p)) <= Mood.SUICIDAL.value: 
+                if getRisk(self.getState(p)) <= Mood.SUICIDAL.value: 
                     for neighbour in self.getMoves(p, Mood.SUICIDAL):
                         self.uf.union(p, neighbour)
 
         # food
+        validHeadMoves = self.getMoves(self.me.head, Mood.SUICIDAL)
         for coordinates in data["board"]["food"]:
             point = Point(coordinates)
             self.setState(point, State.FOOD)
-            if self.uf.connected(self.me.head, point): # only push accessible food
-                heapq.heappush(self.food, (point.distance(self.me.head), point))
+            if any([self.uf.connected(x, point) for x in validHeadMoves]): # only push food reachable from the head
+                # we want food that is close but we also want food that is in a big open area
+                normalizedDistance = point.distance(self.me.head) / (self.height + self.width)
+                normalizedAreaSize = self.uf.getSize(point) / (self.height * self.width)
+                weightedAverage = ((normalizedDistance * 0.3) - (normalizedAreaSize * 0.7)) / 2 # you can fiddle with these weights
+                heapq.heappush(self.food, (weightedAverage, point)) 
 
     def setState(self, point: Point, state: State):
         """Set a state at a point, if the risk is higher or the point is empty."""
@@ -190,7 +195,7 @@ class Game:
         return self.board[point.y][point.x]
     
     def getMoves(self, point: Point, mood: Mood) -> List[Point]:
-        """Get all valid moves from a point."""
+        """Get all valid moves from a point that have risk <= mood."""
 
         # All moves that are inside the board and have risk <= mood.
         moves = [m for m in point.allMoves() if self.isValid(m) and getRisk(self.getState(m)) <= mood.value]
@@ -271,18 +276,18 @@ class UnionFind:
         self.size = [1 for i in range(self.height * self.width)]
 
     def union(self, p1: Point, p2: Point):
-        if self.connected(p1, p2):
-            return
+        parent1 = self.find(p1)
+        parent2 = self.find(p2)
 
-        p1 = self.getIndex(p1)
-        p2 = self.getIndex(p2)
+        if parent1 == parent2:
+            return
         
-        if self.size[p1] >= self.size[p2]:
-            self.id[p2] = p1
-            self.size[p1] += self.size[p2]
+        if self.size[parent1] >= self.size[parent2]:
+            self.id[parent2] = parent1
+            self.size[parent1] += self.size[parent2]
         else:
-            self.id[p1] = p2
-            self.size[p2] += self.size[p1]
+            self.id[parent1] = parent2
+            self.size[parent2] += self.size[parent1]
     
     def find(self, p: Point) -> int:
         p = self.getIndex(p)
