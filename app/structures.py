@@ -190,9 +190,6 @@ class Game:
         # All moves that are inside the board and have risk <= mood.
         moves = [m for m in point.allMoves() if self.isValid(m) and getRisk(self.getState(m)) <= mood.value]
 
-        # Sort moves by increasing risk and decreasing connected area size
-        moves.sort(key = lambda m: (getRisk(self.getState(m)), -self.uf.getSize(m)))
-
         return moves
 
     def isValid(self, point: Point) -> bool:
