@@ -13,15 +13,19 @@ def getMove(data: dict) -> structures.Direction:
     if game.me.health < 50:
         move = eat(game)
         if move:
+            print(f"Eat - {move}")
             return move
 
     # Take the safest move.
     move = defend(game)
     if move:
+        print(f"Defend - {move}")
         return move
 
     # No moves where we survive.
-    return structures.randomDirection()
+    move = structures.randomDirection()
+    print(f"Random - {move}")
+    return 
 
 def eat(game: structures.Game) -> str:
     """Move towards food.
@@ -34,6 +38,7 @@ def eat(game: structures.Game) -> str:
         _, point = heapq.heappop(game.food)
         path = game.aStar(point, mood)
         if path:
+            print(f"Going for food at {path[0]}")
             return game.directionFromHead(path[0])
 
     return None
