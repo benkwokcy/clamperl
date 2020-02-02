@@ -149,7 +149,7 @@ class Game:
 
         # enemies
         for enemy in self.enemies:
-            for move in enemy.head.allMoves():
+            for move in self.getMoves(enemy.head, Mood.SUICIDAL):
                 if self.me.size > enemy.size:
                     self.setState(move, State.ENEMY_HEAD_AREA_WEAK)
                 elif self.me.size == enemy.size:
