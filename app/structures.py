@@ -5,7 +5,7 @@ from enum import Enum
 from typing import List
 import random
 
-class Direction:
+class Direction(Enum):
     """The /move endpoint expects a string of this form."""
     UP = "up"
     DOWN = "down"
@@ -14,7 +14,7 @@ class Direction:
 
 def randomDirection():
     """Use this if we're going to die no matter what."""
-    return random.choice(list(Direction))
+    return random.choice([d.value for d in Direction])
 
 class State(Enum):
     """Each position on the game board is given one of these states."""
@@ -134,7 +134,7 @@ class Game:
         self.me = Snake(data["you"])
         self.enemies = [Snake(d) for d in data["board"]["snakes"]]
         self.food = [] # minheap of food with distance as key
-        self.uf = None # union find of connected areas on the board (separated by snake bodies)
+        self.uf = None # union find of connected areas on the board
 
         # food
         for coordinates in data["board"]["food"]:
@@ -184,12 +184,12 @@ class Game:
         return self.board[point.y][point.x]
     
     def getMoves(self, point: Point, mood: Mood) -> List[Point]:
-        """Get all valid moves from a point.
-        
-        Moves are sorted by increasing risk and decreasing area size
-        Risk is capped by mood.
-        """
-        moves = [m for m in point.allMoves() if self.isValid(m) and getRisk(m) <= mood.value]
+        """Get all valid moves from a point."""
+
+        # All moves that are inside the board and have risk <= mood.
+        moves = [m for m in point.allMoves() if self.isValid(m) and getRisk(self.getState(m)) <= mood.value]
+
+        # Sort moves by increasing risk and decreasing connected area size
         moves.sort(key = lambda m: (getRisk(self.getState(m)), -self.uf.getSize(m)))
 
         return moves
@@ -198,8 +198,8 @@ class Game:
         """Check if a point is within the game board boundaries."""
         return 0 <= point.x < self.width and 0 <= point.y < self.height
 
-    def directionFromHead(self, point: Point) -> Direction:
-        """Given a valid move from the head, return its direction."""
+    def directionFromHead(self, point: Point) -> str:
+        """Given a valid move from the head, return its direction as a string."""
         head = self.me.head
         directions = {
             (head.x, head.y-1): Direction.UP,
@@ -210,14 +210,13 @@ class Game:
 
         assert (point.tup in directions), "Point wasn't a valid move from head."
 
-        return directions[point.tup]
+        return directions[point.tup].value
 
-    def aStar(self, dest: Point, mood: Mood) -> (Direction, int):
+    def aStar(self, dest: Point, mood: Mood) -> List[Point]:
         """A* Algorithm.
         
         Figures out the shortest path to a destination from the head.
         Heuristic is the manhattan distance to the destination point.
-        Returns the first move of that path and the length of the path.
         """
         head = self.me.head
         heap = [(dest.distance(head), head)]
@@ -228,15 +227,14 @@ class Game:
             move,_ = heapq.heappop(heap)
             if move == dest:
                 parent[dest] = move
-                path = self.getPath(parent, dest)
-                return self.directionFromHead(path[0]), len(path)
+                return self.getPath(parent, dest)
             for neighbour in self.getMoves(move, mood):
                 if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
                     parent[neighbour] = move
                     pathCost[neighbour.tup] = pathCost[move.tup] + 1
                     heapq.heappush((pathCost[neighbour.tup] + dest.distance(neighbour), neighbour))
 
-        return None, -1 # if unreachable
+        return None
 
     def getPath(self, parent: Point, dest: Point) -> List[Point]:
         """Reconstruct path from a parent pointer array.
@@ -257,6 +255,8 @@ class Game:
 class UnionFind:
     """Weighted UnionFind.
 
+    Keep track of connected components on the board.
+    We can configure what we consider to be connected using Moods, see Game constructor.
     All the functions take in Point objects for convenience.
     The id and size lists are indexed by int indices.
     
@@ -297,4 +297,4 @@ class UnionFind:
         return (point.y * self.width) + point.x
     
     def getSize(self, point: Point) -> int:
-        return self.size[self.find(self.getIndex(point))]
+        return self.size[self.find(point)]

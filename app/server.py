@@ -5,7 +5,7 @@ import os
 
 import bottle
 
-from app import logic
+from logic import getMove
 
 @bottle.post('/start')
 def start():
@@ -26,7 +26,7 @@ def start():
 def move():
     """Updates your snake with the current state of the game board and asks for a move."""
     data = bottle.request.json
-    direction = logic.getMove(data)
+    direction = getMove(data)
 
     return bottle.HTTPResponse(
         status = 200,
