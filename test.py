@@ -23,5 +23,8 @@ class TestGetMove(unittest.TestCase):
     def test_eat_up(self):
         assert logic.getMove(mocks.eatUp) == "up"
 
+    def test_avoid_trap_right(self):
+        assert logic.getMove(mocks.moveRightToOpenArea) == "right", logic.getMove(mocks.moveRightToOpenArea)
+
 if __name__ == "__main__":
     unittest.main()
