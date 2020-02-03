@@ -11,7 +11,8 @@ def getMove(data: dict) -> structures.Direction:
 
     # Eat when food dips below threshold or our size is smaller than the average enemy
     hungry = game.me.health < 50
-    smallerThanAverage = game.enemies and (game.me.size <= (sum([e.size for e in game.enemies] / len(game.enemies))))
+    smallerThanAverage = game.enemies and (game.me.size <= (sum([e.size for e in game.enemies]) / len(game.enemies)))
+
     if hungry or smallerThanAverage:
         move = eat(game)
         if move:
