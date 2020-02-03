@@ -23,11 +23,9 @@ class Mood(Enum):
     Anywhere you see mood as a parameter, you can modify it to make
     the snake act safer or riskier.
     """
-    SAFE = 1 # no chance of death
-    AGGRESSIVE = 2 # no chance of death, could kill another snake
-    RISKY = 3 # could die while killing another snake
-    SUICIDAL = 4 # could die
-    ALL = 5 # definitely die
+    SAFE = 3 # only moves with no chance of death
+    RISKY = 5 # include moves with some chance of death
+    ALL = 6 # include moves where we definitely die
 
 class State(Enum):
     """Each position on the game board is given one of these states."""
@@ -44,24 +42,20 @@ class State(Enum):
 def getRisk(state: State) -> int:
     """Allows me to rank moves by the danger level of their states."""
     risk = {
-        # SUPER SAFE
-        State.SELF_TAIL: 0,
-
         # SAFE
-        State.ENEMY_TAIL: 1,
-        State.EMPTY: 1,
-        State.FOOD: 1,
-        
-        # ARGUEABLE - can modify this to change aggressiveness
-        State.ENEMY_HEAD_AREA_WEAK: 2, # a point reachable by an enemy head who's length is less than ours
+        State.FOOD: 0, # grab food if possible
+        State.SELF_TAIL: 1,
+        State.ENEMY_HEAD_AREA_WEAK: 1, # a point reachable by an enemy head who's length is less than ours
+        State.EMPTY: 2,
+        State.ENEMY_TAIL: 3,
 
         # POSSIBLE DEATH
-        State.ENEMY_HEAD_AREA_EQUAL: 3, # a point reachable by an enemy head who's length is greater than or equal to ours
-        State.ENEMY_HEAD_AREA_STRONG: 4, # a point reachable by an enemy head who's length is greater than ours
+        State.ENEMY_HEAD_AREA_EQUAL: 4, # a point reachable by an enemy head who's length is greater than or equal to ours
+        State.ENEMY_HEAD_AREA_STRONG: 5, # a point reachable by an enemy head who's length is greater than ours
 
         # DEFINITE DEATH
-        State.ENEMY_BODY: 5,
-        State.SELF_BODY: 5,
+        State.ENEMY_BODY: 6,
+        State.SELF_BODY: 6,
     }
 
     return risk[state]
@@ -150,7 +144,7 @@ class Game:
 
         # enemies
         for enemy in self.enemies:
-            for move in self.getMoves(enemy.head, Mood.SUICIDAL):
+            for move in self.getMoves(enemy.head, Mood.RISKY):
                 if self.me.size > enemy.size:
                     self.setState(move, State.ENEMY_HEAD_AREA_WEAK)
                 elif self.me.size == enemy.size:
@@ -166,12 +160,12 @@ class Game:
         for row in range(self.height):
             for col in range(self.width):
                 p = Point({"x": col, "y": row})
-                if getRisk(self.getState(p)) <= Mood.SUICIDAL.value: 
-                    for neighbour in self.getMoves(p, Mood.SUICIDAL):
+                if getRisk(self.getState(p)) <= Mood.RISKY.value: 
+                    for neighbour in self.getMoves(p, Mood.RISKY):
                         self.uf.union(p, neighbour)
 
         # food
-        validHeadMoves = self.getMoves(self.me.head, Mood.SUICIDAL)
+        validHeadMoves = self.getMoves(self.me.head, Mood.RISKY)
         for coordinates in data["board"]["food"]:
             point = Point(coordinates)
             self.setState(point, State.FOOD)

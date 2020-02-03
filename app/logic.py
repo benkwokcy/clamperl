@@ -33,7 +33,7 @@ def eat(game: structures.Game) -> str:
 
     Takes riskier paths to the food if it is urgent.
     """
-    mood = structures.Mood.AGGRESSIVE if game.me.health > 25 else structures.Mood.RISKY
+    mood = structures.Mood.SAFE if game.me.health > 25 else structures.Mood.RISKY
 
     while game.food:
         _, point = heapq.heappop(game.food)
@@ -45,7 +45,7 @@ def eat(game: structures.Game) -> str:
 
 def defend(game: structures.Game) -> str:
     """Go to the safest location."""
-    moves = game.getMoves(game.me.head, structures.Mood.SUICIDAL)
+    moves = game.getMoves(game.me.head, structures.Mood.RISKY)
 
     if not moves:
         return None
