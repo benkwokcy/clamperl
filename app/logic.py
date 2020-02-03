@@ -9,8 +9,8 @@ def getMove(data: dict) -> structures.Direction:
     """Parent function for deciding the next move."""
     game = structures.Game(data)
 
-    # Eat when food dips below threshold.
-    if game.me.health < 50:
+    # Eat when food dips below threshold or our size is smaller than average
+    if game.me.health < 50 or game.me.size <= sum([e.size for e in game.enemies] / len(game.enemies)):
         move = eat(game)
         if move:
             print(f"Eat - {move}")

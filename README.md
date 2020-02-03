@@ -38,6 +38,5 @@ git push heroku
 
 ## To Do
 
-- Avoid food that other snakes are closer to?
 - Try a few moves into the future and pick the best one
   - Parallelize these computations
