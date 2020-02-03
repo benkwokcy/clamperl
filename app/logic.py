@@ -9,8 +9,10 @@ def getMove(data: dict) -> structures.Direction:
     """Parent function for deciding the next move."""
     game = structures.Game(data)
 
-    # Eat when food dips below threshold or our size is smaller than average
-    if game.me.health < 50 or game.me.size <= sum([e.size for e in game.enemies] / len(game.enemies)):
+    # Eat when food dips below threshold or our size is smaller than the average enemy
+    hungry = game.me.health < 50
+    smallerThanAverage = game.enemies and (game.me.size <= (sum([e.size for e in game.enemies] / len(game.enemies))))
+    if hungry or smallerThanAverage:
         move = eat(game)
         if move:
             print(f"Eat - {move}")
@@ -28,11 +30,11 @@ def getMove(data: dict) -> structures.Direction:
     return 
 
 def eat(game: structures.Game) -> str:
-    """Move towards food.
+    """Move towards food."""
 
-    Takes riskier paths to the food if it is urgent.
-    """
-    mood = structures.Mood.SAFE if game.me.health > 25 else structures.Mood.RISKY
+    mood = structures.Mood.SAFE
+    if game.me.health <= 25: # take riskier paths to the food if we're starving
+        mood = structures.Mood.RISKY
 
     while game.food:
         _, point = heapq.heappop(game.food)
