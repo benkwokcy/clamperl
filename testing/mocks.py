@@ -56,19 +56,6 @@ moveRightToOpenArea = {
     },
 }
 
-avoidEnemyMoveRight = {
-    "board": {
-        "height": 3,
-        "width": 3,
-        "food": [],
-        "snakes": [
-            {"id": "", "name": "testenemy", "health": 90, "body": [{"x": 0, "y": 0}]},
-            {"id": "", "name": "testenemy2", "health": 90, "body": [{"x": 0, "y": 1}]}
-        ],
-    },
-    "you": {"id": "", "name": "testsnake", "health": 90, "body": [{"x": 1, "y": 1}]},
-}
-
 avoidEnemyMoveUp = {
     "board": {
         "height": 11,
@@ -93,5 +80,55 @@ avoidEnemyMoveUp = {
         "name": "testsnake",
         "health": 90,
         "body": [{"x": 0, "y": 3}, {"x": 0, "y": 4}, {"x": 0, "y": 5}],
+    },
+}
+
+avoidEnemyMoveRight = {
+    "board": {
+        "height": 3,
+        "width": 3,
+        "food": [],
+        "snakes": [
+            {"id": "", "name": "testenemy", "health": 90, "body": [{"x": 0, "y": 0}]},
+            {"id": "", "name": "testenemy2", "health": 90, "body": [{"x": 0, "y": 1}]}
+        ],
+    },
+    "you": {"id": "", "name": "testsnake", "health": 90, "body": [{"x": 1, "y": 0}]},
+}
+
+avoidEnemyMoveRight2 = {
+    "board": {
+        "height": 11,
+        "width": 11,
+        "food": [
+            {"x": 2, "y": 7},
+            {"x": 5, "y": 10},
+        ],
+        "snakes": [
+            {
+                "id": "",
+                "name": "testenemy",
+                "health": 90,
+                "body": [{"x": 0, "y": 6}, {"x": 0, "y": 5}, {"x": 1, "y": 5}],
+            },
+            {
+                "id": "",
+                "name": "testenemy2",
+                "health": 90,
+                "body": [{"x": 4, "y": 2}, {"x": 3, "y": 2}, {"x": 2, "y": 2}],
+            },
+            {
+                "id": "",
+                "name": "testenemy3",
+                "health": 90,
+                "body": [{"x": 8, "y": 8}, {"x": 7, "y": 8}, {"x": 7, "y": 6}, {"x": 7, "y": 5}, {"x": 7, "y": 4}, {"x": 7, "y": 3}, {"x": 7, "y": 2}, {"x": 7, "y": 1}],
+            },
+        ],
+    },
+    "you": {
+        "id": "",
+        "name": "testsnake",
+        "health": 90,
+        "body": [{"x": 1, "y": 7}, {"x": 1, "y": 8}, {"x": 2, "y": 8}],
     },
 }
