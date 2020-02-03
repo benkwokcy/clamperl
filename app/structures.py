@@ -116,12 +116,15 @@ class Point:
 
 class Snake:
     def __init__(self, data: dict):
+        body = data["body"]
+
         self.name = data["name"]
-        self.head = Point(data["body"][0])
-        self.tail = Point(data["body"][-1])
-        self.middle = { Point(c) for c in data["body"][1:-1] } # everything except the head and the tail
-        self.size = len(data["body"])
+        self.head = Point(body[0])
+        self.tail = Point(body[-1])
+        self.middle = { Point(c) for c in body[1:-1] } # everything except the head and the tail
+        self.size = len(body)
         self.health = data["health"]
+        self.ate = self.size >= 2 and body[-1] == body[-2] # just ate food so there is a body part on top of the tail
 
 class Game:
     """Contains the game board and all objects on the board.
@@ -140,10 +143,11 @@ class Game:
         # myself
         self.setState(self.me.head, State.SELF_BODY)
         self.setStates(self.me.middle, State.SELF_BODY)
-        self.setState(self.me.tail, State.SELF_TAIL)
+        self.setState(self.me.tail, State.SELF_BODY if self.me.ate else State.SELF_TAIL) # if just ate, the tail has a body part on top of it
 
         # enemies
         for enemy in self.enemies:
+            # head on collisions kill the snake who is smaller. Equal lengths means both snakes die.
             for move in self.getMoves(enemy.head, Mood.RISKY):
                 if self.me.size > enemy.size:
                     self.setState(move, State.ENEMY_HEAD_AREA_WEAK)
@@ -153,7 +157,7 @@ class Game:
                     self.setState(move, State.ENEMY_HEAD_AREA_STRONG)
             self.setState(enemy.head, State.ENEMY_BODY)
             self.setStates(enemy.middle, State.ENEMY_BODY)
-            self.setState(enemy.tail, State.ENEMY_TAIL)
+            self.setState(enemy.tail, State.ENEMY_BODY if enemy.ate else State.ENEMY_TAIL) # if just ate, the tail has a body part on top of it
 
         # calculate reachable areas
         self.uf = UnionFind(self.board)
@@ -231,14 +235,14 @@ class Game:
         while heap:
             _, move = heapq.heappop(heap)
             if move == dest:
-                return self.getPath(parent, dest)
+                return self.getPath(parent, dest) # path found
             for neighbour in self.getMoves(move, mood):
                 if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
                     parent[neighbour] = move
                     pathCost[neighbour.tup] = pathCost[move.tup] + 1
                     heapq.heappush(heap, (pathCost[neighbour.tup] + dest.distance(neighbour), neighbour))
 
-        return None
+        return None # no path to destination
 
     def getPath(self, parent: Point, dest: Point) -> List[Point]:
         """Reconstruct path from a parent pointer array.
@@ -257,14 +261,12 @@ class Game:
         return path[::-1]
 
 class UnionFind:
-    """Weighted UnionFind.
+    """Weighted UnionFind with Path Compression.
 
     Keep track of connected components on the board.
     We can configure what we consider to be connected using Moods, see Game constructor.
     All the functions take in Point objects for convenience.
     The id and size lists are indexed by int indices.
-    
-    TODO: Path compression
     """
     def __init__(self, board: List[List[State]]):
         self.height = len(board)
@@ -279,6 +281,7 @@ class UnionFind:
         if parent1 == parent2:
             return
         
+        # link the smaller tree to the root of the bigger tree
         if self.size[parent1] >= self.size[parent2]:
             self.id[parent2] = parent1
             self.size[parent1] += self.size[parent2]
@@ -290,6 +293,7 @@ class UnionFind:
         p = self.getIndex(p)
 
         while p != self.id[p]:
+            self.id[p] = self.id[self.id[p]] # path compression - make every other node point to its grandparent
             p = self.id[p]
         
         return p

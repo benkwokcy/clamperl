@@ -15,7 +15,6 @@ def getMove(data: dict) -> structures.Direction:
         if move:
             print(f"Eat - {move}")
             return move
-        print("Tried to eat but failed.")
 
     # Take the safest move.
     move = defend(game)
