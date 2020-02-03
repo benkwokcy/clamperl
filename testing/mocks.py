@@ -55,3 +55,24 @@ moveRightToOpenArea = {
         ],
     },
 }
+
+avoidEnemyMoveRight = {
+    "board": {
+        "height": 3, 
+        "width": 3, 
+        "food": [], 
+        "snakes": [
+            {
+              "id": "",
+              "name": "testenemy",
+              "health": 90,
+              "body": [
+                {
+                  "x": 0,
+                  "y": 0
+                }
+              ]
+            }
+        ]},
+    "you": {"id": "", "name": "testsnake", "health": 90, "body": [{"x": 1, "y": 1}]},
+}
