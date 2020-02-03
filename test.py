@@ -29,5 +29,8 @@ class TestGetMove(unittest.TestCase):
     def test_avoid_enemy_right(self):
         assert logic.getMove(mocks.avoidEnemyMoveRight) == "right"
 
+    def test_avoid_enemy_up(self):
+        assert logic.getMove(mocks.avoidEnemyMoveUp) == "up"
+
 if __name__ == "__main__":
     unittest.main()

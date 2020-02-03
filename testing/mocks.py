@@ -58,21 +58,40 @@ moveRightToOpenArea = {
 
 avoidEnemyMoveRight = {
     "board": {
-        "height": 3, 
-        "width": 3, 
-        "food": [], 
+        "height": 3,
+        "width": 3,
+        "food": [],
+        "snakes": [
+            {"id": "", "name": "testenemy", "health": 90, "body": [{"x": 0, "y": 0}]},
+            {"id": "", "name": "testenemy2", "health": 90, "body": [{"x": 0, "y": 1}]}
+        ],
+    },
+    "you": {"id": "", "name": "testsnake", "health": 90, "body": [{"x": 1, "y": 1}]},
+}
+
+avoidEnemyMoveUp = {
+    "board": {
+        "height": 11,
+        "width": 11,
+        "food": [
+            {"x": 1, "y": 3},
+            {"x": 2, "y": 5},
+            {"x": 2, "y": 10},
+            {"x": 6, "y": 8},
+        ],
         "snakes": [
             {
-              "id": "",
-              "name": "testenemy",
-              "health": 90,
-              "body": [
-                {
-                  "x": 0,
-                  "y": 0
-                }
-              ]
+                "id": "",
+                "name": "testenemy",
+                "health": 90,
+                "body": [{"x": 1, "y": 4}, {"x": 2, "y": 4}, {"x": 3, "y": 4}],
             }
-        ]},
-    "you": {"id": "", "name": "testsnake", "health": 90, "body": [{"x": 1, "y": 1}]},
+        ],
+    },
+    "you": {
+        "id": "",
+        "name": "testsnake",
+        "health": 90,
+        "body": [{"x": 0, "y": 3}, {"x": 0, "y": 4}, {"x": 0, "y": 5}],
+    },
 }
