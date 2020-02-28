@@ -9,8 +9,6 @@ A snake AI for Battlesnake 2020. Based off the Python starter snake.
 - /app
   - logic.py - logic for calculating moves
   - structures.py - data structures for calculating moves
-- /testing
-  - mocks.py - mocked JSON data for unit testing
 - app.json - tell Heroku some random details
 - Procfile - tells Heroku how to run the app
 - requirements.txt - tells Heroku what dependencies to install
