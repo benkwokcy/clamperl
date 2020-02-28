@@ -30,7 +30,10 @@ class State(Enum):
     ENEMY_BODY = auto()
 
 def getRisk(state: State) -> int:
-    """Allows me to rank moves by the danger level of their states."""
+    """Assign a riskiness value to each state.
+    The higher the value, the more dangerous the state is.
+    This allows me to compare moves and choose the safer options.
+    """
     risk = {
         # SAFE
         State.FOOD: 0, # grab food if possible
@@ -51,11 +54,11 @@ def getRisk(state: State) -> int:
     return risk[state]
 
 class Mood(Enum):
-    """Sets the maximum riskiness allowed by getMoves.
-    
-    This allows us to easily configure the behavior of the snake.
-    Anywhere you see mood as a parameter, you can modify it to make
-    the snake act safer or riskier.
+    """Assigns names to commonly used risk values.
+    This is used to set the maximum riskiness allowed by the getMoves() function.
+    When we do this, we can easily configure the behavior of the snake.
+    Anywhere you see mood as a parameter, you can modify it to make the snake act
+    safer or riskier.
     """
     SAFE = 3 # only moves with no chance of death
     RISKY = 5 # include moves with some chance of death
@@ -117,7 +120,6 @@ class Snake:
 
 class Game:
     """Contains the game board and all objects on the board.
-
     This is the main data structure for making decisions about the game.
     """
     def __init__(self, data: dict):
@@ -212,10 +214,25 @@ class Game:
 
     def aStar(self, dest: Point, mood: Mood) -> List[Point]:
         """A* Algorithm.
-        
         Figures out the shortest path to a destination from the head.
-        Heuristic is the manhattan distance to the destination point.
+        Heuristic is the "manhattan" distance to the destination point.
         """
+
+        def _getPath(parent: Point, dest: Point) -> List[Point]:
+            """Reconstruct path from a parent pointer array.
+            Path returned does not include the source.
+            """
+            path = []
+
+            p = dest
+            while parent[p] != self.me.head:
+                path.append(p)
+                p = parent[p]
+
+            path.append(p)
+
+            return path[::-1]
+
         head = self.me.head
         heap = [(dest.distance(head), head)]
         pathCost = {head.tup: 0} # path cost so far from destination
@@ -224,7 +241,7 @@ class Game:
         while heap:
             _, move = heapq.heappop(heap)
             if move == dest:
-                return self.getPath(parent, dest) # path found
+                return _getPath(parent, dest) # path found
             for neighbour in self.getMoves(move, mood):
                 if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
                     parent[neighbour] = move
@@ -232,22 +249,6 @@ class Game:
                     heapq.heappush(heap, (pathCost[neighbour.tup] + dest.distance(neighbour), neighbour))
 
         return None # no path to destination
-
-    def getPath(self, parent: Point, dest: Point) -> List[Point]:
-        """Reconstruct path from a parent pointer array.
-        
-        Path returned does not include the source.
-        """
-        path = []
-
-        p = dest
-        while parent[p] != self.me.head:
-            path.append(p)
-            p = parent[p]
-
-        path.append(p)
-
-        return path[::-1]
 
 class UnionFind:
     """Weighted UnionFind with Path Compression.
