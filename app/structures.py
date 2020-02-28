@@ -1,8 +1,8 @@
 """Data structures used by logic.py"""
 
 import heapq
-from enum import Enum
-from typing import List
+from enum import Enum, auto
+from typing import List # for type annotations
 import random
 
 class Direction(Enum):
@@ -17,6 +17,39 @@ class Direction(Enum):
         """Use this if we're going to die no matter what."""
         return random.choice([d.value for d in Direction])
 
+class State(Enum):
+    """Each 1x1 square on the game board is given a state."""
+    SELF_TAIL = auto()
+    EMPTY = auto()
+    FOOD = auto()
+    ENEMY_TAIL = auto()
+    ENEMY_HEAD_AREA_WEAK = auto() # a point reachable by an enemy head who's length is less than ours
+    ENEMY_HEAD_AREA_EQUAL = auto() # a point reachable by an enemy head who's length is equal to ours
+    ENEMY_HEAD_AREA_STRONG = auto() # a point reachable by an enemy head who's length is greater than ours
+    SELF_BODY = auto()
+    ENEMY_BODY = auto()
+
+def getRisk(state: State) -> int:
+    """Allows me to rank moves by the danger level of their states."""
+    risk = {
+        # SAFE
+        State.FOOD: 0, # grab food if possible
+        State.SELF_TAIL: 1,
+        State.ENEMY_HEAD_AREA_WEAK: 1, 
+        State.EMPTY: 2,
+        State.ENEMY_TAIL: 3,
+
+        # POSSIBLE DEATH
+        State.ENEMY_HEAD_AREA_EQUAL: 4, 
+        State.ENEMY_HEAD_AREA_STRONG: 5, 
+
+        # DEFINITE DEATH
+        State.ENEMY_BODY: 6,
+        State.SELF_BODY: 6,
+    }
+
+    return risk[state]
+
 class Mood(Enum):
     """Sets the maximum riskiness allowed by getMoves.
     
@@ -27,39 +60,6 @@ class Mood(Enum):
     SAFE = 3 # only moves with no chance of death
     RISKY = 5 # include moves with some chance of death
     ALL = 6 # include moves where we definitely die
-
-class State(Enum):
-    """Each position on the game board is given one of these states."""
-    SELF_TAIL = 1
-    EMPTY = 2
-    FOOD = 3
-    ENEMY_TAIL = 4
-    ENEMY_HEAD_AREA_WEAK = 5
-    ENEMY_HEAD_AREA_EQUAL = 6
-    ENEMY_HEAD_AREA_STRONG = 7
-    SELF_BODY = 8
-    ENEMY_BODY = 9
-
-def getRisk(state: State) -> int:
-    """Allows me to rank moves by the danger level of their states."""
-    risk = {
-        # SAFE
-        State.FOOD: 0, # grab food if possible
-        State.SELF_TAIL: 1,
-        State.ENEMY_HEAD_AREA_WEAK: 1, # a point reachable by an enemy head who's length is less than ours
-        State.EMPTY: 2,
-        State.ENEMY_TAIL: 3,
-
-        # POSSIBLE DEATH
-        State.ENEMY_HEAD_AREA_EQUAL: 4, # a point reachable by an enemy head who's length is greater than or equal to ours
-        State.ENEMY_HEAD_AREA_STRONG: 5, # a point reachable by an enemy head who's length is greater than ours
-
-        # DEFINITE DEATH
-        State.ENEMY_BODY: 6,
-        State.SELF_BODY: 6,
-    }
-
-    return risk[state]
 
 class Point:
     """A 2D point representing a position on the game board."""
