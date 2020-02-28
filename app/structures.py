@@ -189,14 +189,14 @@ class Game:
     def getMoves(self, point: Point, mood: Mood) -> List[Point]:
         """Get all valid moves from a point that have risk <= mood."""
 
+        def _isValid(point: Point) -> bool:
+            """Check if a point is within the game board boundaries."""
+            return 0 <= point.x < self.width and 0 <= point.y < self.height
+
         # All moves that are inside the board and have risk <= mood.
-        moves = [m for m in point.allMoves() if self.isValid(m) and getRisk(self.getState(m)) <= mood.value]
+        moves = [m for m in point.allMoves() if _isValid(m) and getRisk(self.getState(m)) <= mood.value]
 
         return moves
-
-    def isValid(self, point: Point) -> bool:
-        """Check if a point is within the game board boundaries."""
-        return 0 <= point.x < self.width and 0 <= point.y < self.height
 
     def directionFromHead(self, point: Point) -> str:
         """Given a valid move from the head, return its direction as a string."""
