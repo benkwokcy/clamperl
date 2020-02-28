@@ -27,7 +27,7 @@ def start():
 def move():
     """Updates your snake with the current state of the game board and asks for a move."""
     data = bottle.request.json
-    direction = getMove(data) # this is where the magic happens
+    direction = getMove(data)[0] # this is where the magic happens
 
     return bottle.HTTPResponse(
         status = 200,
@@ -73,4 +73,4 @@ if __name__ == '__main__':
         debug = os.getenv('DEBUG', True),
         server = CherryPyServer
     )
-    print(f"huntail is running on port {os.getenv('PORT', '8080')}")
+    # print(f"huntail is running on port {os.getenv('PORT', '8080')}")

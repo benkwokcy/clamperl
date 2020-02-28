@@ -1,34 +1,39 @@
-"""Implements the logic for the /move endpoint."""
+"""Implements the logic for the /move endpoint in server.py"""
 
 import heapq
+from enum import Enum, auto
 from typing import List
 
 from app import structures
 
-def getMove(data: dict) -> structures.Direction:
+class Mode(Enum):
+    """These values are used in test.py to see if the snake is doing what I expect."""
+    eat = auto()
+    defend = auto()
+    random = auto()
+
+def getMove(data: dict) -> (structures.Direction, Mode):
     """Parent function for deciding the next move."""
     game = structures.Game(data)
 
     # Eat when food dips below threshold or our size is smaller than the average enemy
-    hungry = game.me.health < 50
     smallerThanAverage = game.enemies and (game.me.size <= (sum([e.size for e in game.enemies]) / len(game.enemies)))
-
-    if hungry or smallerThanAverage:
+    if game.me.health < 50 or smallerThanAverage:
         move = eat(game)
         if move:
-            print(f"Eat - {move}")
-            return move
+            # print(f"Eat - {move}")
+            return (move, Mode.eat)
 
     # Take the safest move.
     move = defend(game)
     if move:
-        print(f"Defend - {move}")
-        return move
+        # print(f"Defend - {move}")
+        return (move, Mode.defend)
 
     # No moves where we survive.
     move = structures.Direction.randomDirection()
-    print(f"Random - {move}")
-    return 
+    # print(f"Random - {move}")
+    return (move, Mode.random)
 
 def eat(game: structures.Game) -> str:
     """Move towards food."""
@@ -48,17 +53,16 @@ def eat(game: structures.Game) -> str:
 def defend(game: structures.Game) -> str:
     """Go to the safest location."""
     moves = game.getMoves(game.me.head, structures.Mood.RISKY)
-
     if not moves:
         return None
 
     # we want a low risk move in big area
-    def key(p: structures.Point) -> int:
+    def _key(p: structures.Point) -> int:
         nonlocal game
         risk = structures.getRisk(game.getState(p))
         normalizedAreaSize = game.uf.getSize(p) / (game.height * game.width)
         return risk - normalizedAreaSize
 
-    bestMove = min(moves, key=key) 
+    bestMove = min(moves, key=_key) 
 
     return game.directionFromHead(bestMove)
