@@ -1,9 +1,9 @@
 """Data structures used by logic.py"""
 
 import heapq
-from enum import Enum, auto
-from typing import List # for type annotations
 import random
+from enum import Enum, auto
+from typing import List
 
 class Direction(Enum):
     """The /move endpoint expects a string of this form."""
