@@ -63,7 +63,7 @@ class CherryPyServer(bottle.ServerAdapter):
         finally:
             server.stop()
 
-application = bottle.default_app() # this is needed by gunicorn for some reason
+application = bottle.default_app()
 
 if __name__ == '__main__':
     bottle.run(
