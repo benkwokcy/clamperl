@@ -67,18 +67,6 @@ class Point:
         self.y = data["y"]
         self.tup = (self.x, self.y)
 
-    def up(self):
-        return Point({"x": self.x, "y": self.y-1})
-    
-    def down(self):
-        return Point({"x": self.x, "y": self.y+1})
-
-    def left(self):
-        return Point({"x": self.x-1, "y": self.y})
-
-    def right(self):
-        return Point({"x": self.x+1, "y": self.y})
-
     def allMoves(self):
         """Returns points for up, down, left, right."""
         moves = [
