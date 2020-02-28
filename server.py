@@ -73,4 +73,4 @@ if __name__ == '__main__':
         debug = os.getenv('DEBUG', True),
         server = CherryPyServer
     )
-    # print(f"huntail is running on port {os.getenv('PORT', '8080')}")
+    print(f"huntail is running on port {os.getenv('PORT', '8080')}")
