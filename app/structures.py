@@ -221,7 +221,7 @@ class Game:
         if averageSize <= self.me.size:
             return 4
         
-        return self.me.size / averageSize
+        return self.me.size / averageSize * 4
 
     def getAreaSize(self, p: Point) -> (int, int):
         """Area size not including the given point.
