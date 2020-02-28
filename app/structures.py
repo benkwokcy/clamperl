@@ -200,24 +200,28 @@ class Game:
     
     def simulateMove(self, move: Point) -> float:
         """Simulates one move into the future and
-        gives a score to how good my position is.
+        returns the risk of the future.
         """
-        # save board state
+        # change board state
         originalTailState = self.board[self.me.tail.y][self.me.tail.x]
         if self.getState(self.me.tail) == State.SELF_TAIL:
             self.board[self.me.tail.y][self.me.tail.x] = State.EMPTY
 
         safeSize, riskySize = self.getAreaSize(move)
 
-        if riskySize == 0:
-            return -1
-        if safeSize == 0:
-            return -0.5
-
-        # restore original board state
+        # restore board state
         self.board[self.me.tail.y][self.me.tail.x] = originalTailState
 
-        return ((0.7 * safeSize) + (0.3 * riskySize)) / self.me.size
+        averageSize = ((0.7 * safeSize) + (0.3 * riskySize))
+
+        if riskySize == 0:
+            return 6
+        if safeSize == 0:
+            return 5
+        if averageSize <= self.me.size:
+            return 4
+        
+        return self.me.size / averageSize
 
     def getAreaSize(self, p: Point) -> (int, int):
         """Area size not including the given point.
