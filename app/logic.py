@@ -55,7 +55,7 @@ def eat(game: structures.Game) -> str:
         """We want the closest food that is also in a big open area."""
         dist = len(path) / maxDistance
         areaSize = game.uf.getSize(path[0]) / (game.height * game.width)
-        print("food", dist, areaSize) # TODO
+        print(f"{game.id} - turn {game.turn} - eat - {dist} {areaSize}") # TODO
         if game.me.health < 20:
             return (0.4 * (1 - dist)) + (0.6 * areaSize) # prioritize closer food if health is getting low
         else:
@@ -75,7 +75,7 @@ def defend(game: structures.Game) -> str:
         nonlocal game
         currentRisk = structures.getRisk(game.getState(p))
         futureRisk = game.simulateMove(p)
-        print("defend", currentRisk, futureRisk) # TODO
+        print(f"{game.id} - turn {game.turn} - defend - {currentRisk} {futureRisk}") # TODO
         return (currentRisk + futureRisk) / 2
 
     bestMove = min(moves, key=_key)
