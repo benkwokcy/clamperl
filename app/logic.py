@@ -21,18 +21,15 @@ def getMove(data: dict) -> (structures.Direction, Mode):
     if game.me.health < 50 or smallerThanAverage:
         move = eat(game)
         if move:
-            # print(f"Eat - {move}")
             return (move, Mode.eat)
 
     # Take the safest move.
     move = defend(game)
     if move:
-        # print(f"Defend - {move}")
         return (move, Mode.defend)
 
     # No moves where we survive.
     move = structures.Direction.randomDirection()
-    # print(f"Random - {move}")
     return (move, Mode.random)
 
 def eat(game: structures.Game) -> str:
