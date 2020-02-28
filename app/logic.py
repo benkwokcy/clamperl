@@ -8,7 +8,8 @@ from app import structures
 
 class Mode(Enum):
     """These values are used in test.py to see if the snake is doing what I expect."""
-    eat = auto()
+    hungry = auto()
+    grow = auto()
     defend = auto()
     random = auto()
 
@@ -21,7 +22,7 @@ def getMove(data: dict) -> (structures.Direction, Mode):
     if game.me.health < 50 or smallerThanAverage:
         move = eat(game)
         if move:
-            return (move, Mode.eat)
+            return (move, Mode.hungry if game.me.health < 50 else Mode.grow)
 
     # Take the safest move.
     move = defend(game)
