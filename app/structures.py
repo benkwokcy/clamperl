@@ -117,8 +117,7 @@ class Game:
         self.me = Snake(data["you"])
         self.enemies = [Snake(d) for d in data["board"]["snakes"]] 
         self.food = [] # minheap of food with distance as key
-        self.ufRisky = UnionFind(self.board) # connected areas assuming no snakes move in my way
-        self.ufSafe = UnionFind(self.board) # connected areas assuming alll snakes move in my way
+        self.uf = UnionFind(self.board) # connected areas
 
         # myself
         self.setState(self.me.head, State.SELF_BODY)
@@ -145,10 +144,7 @@ class Game:
                 p = Point({"x": col, "y": row})
                 if getRisk(self.getState(p)) <= Mood.RISKY.value: 
                     for neighbour in self.getMoves(p, Mood.RISKY):
-                        self.ufRisky.union(p, neighbour)
-                if getRisk(self.getState(p)) <= Mood.SAFE.value: 
-                    for neighbour in self.getMoves(p, Mood.SAFE):
-                        self.ufSafe.union(p, neighbour)
+                        self.uf.union(p, neighbour)
 
         # food
         validHeadMoves = self.getMoves(self.me.head, Mood.RISKY)
@@ -157,10 +153,10 @@ class Game:
             self.setState(point, State.FOOD)
             # only consider food reachable from the head
             # TODO - theoretically even if the path to the food is blocked now, we can still get there as long as the path clears up as we move
-            if any([self.ufRisky.connected(x, point) for x in validHeadMoves]): 
+            if any([self.uf.connected(x, point) for x in validHeadMoves]): 
                 # we want food that is close but we also want food that is in a big open area
                 normalizedDistance = point.distance(self.me.head) / (self.height + self.width)
-                normalizedAreaSize = self.ufRisky.getSize(point) / (self.height * self.width)
+                normalizedAreaSize = self.uf.getSize(point) / (self.height * self.width)
                 weightedAverage = ((normalizedDistance * 0.3) - (normalizedAreaSize * 0.7)) / 2 # you can fiddle with these weights
                 heapq.heappush(self.food, (weightedAverage, point)) # this is a min-heap so it will pop the *smallest* weightAverage
 
@@ -211,6 +207,47 @@ class Game:
         assert (point.tup in directions), "Point wasn't a valid move from head."
 
         return directions[point.tup].value
+    
+    def simulateMove(self, move: Point) -> float:
+        """Simulates one move into the future and
+        gives a score to how good my position is.
+        """
+        # save board state
+        originalTailState = self.board[self.me.tail.y][self.me.tail.x]
+        if self.getState(self.me.tail) == State.SELF_TAIL:
+            self.board[self.me.tail.y][self.me.tail.x] = State.EMPTY
+
+        areaScore = self.getAreaSize(move, Mood.SAFE) / self.me.size
+        if areaScore > 1.0:
+            areaScore = 1.0
+        moveScore = 0.0
+        for move in self.getMoves(move, Mood.RISKY):
+            risk = getRisk(self.getState(move))
+            if risk <= Mood.SAFE.value:
+                moveScore += 1
+            elif risk <= Mood.RISKY.value:
+                moveScore += 0.25
+        moveScore = moveScore / 4
+
+        # restore original board state
+        self.board[self.me.tail.y][self.me.tail.x] = originalTailState
+
+        return (areaScore + moveScore) / 2
+
+    def getAreaSize(self, p: Point, mood: Mood) -> int:
+        """Use this instead of UnionFind if you only care
+        about the size of a single connected area."""
+        seen = set([p])
+        stack = [p]
+
+        while stack:
+            curr = stack.pop()
+            for neighbour in self.getMoves(curr, mood):
+                if neighbour not in seen:
+                    seen.add(neighbour)
+                    stack.append(neighbour)
+        
+        return len(seen) - 1
 
     def aStar(self, dest: Point, firstMoveMood: Mood, pathMood: Mood) -> List[Point]:
         """A* Algorithm.

@@ -56,9 +56,9 @@ def defend(game: structures.Game) -> str:
     # we want a low risk move in big area
     def _key(p: structures.Point) -> int:
         nonlocal game
-        risk = structures.getRisk(game.getState(p))
-        normalizedAreaSize = game.ufRisky.getSize(p) / (game.height * game.width)
-        return risk - normalizedAreaSize
+        normalizedRisk = structures.getRisk(game.getState(p)) / 6
+        normalizedAreaSize = game.uf.getSize(p) / (game.height * game.width)
+        return (normalizedRisk * 0.7) - (normalizedAreaSize * 0.1) - (game.simulateMove(p) * 0.2)
 
     bestMove = min(moves, key=_key) 
 
