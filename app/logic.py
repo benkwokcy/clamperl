@@ -36,7 +36,7 @@ def getMove(data: dict) -> (structures.Direction, Mode):
 def eat(game: structures.Game) -> str:
     """Move towards food that is reachable, nearby, and in a big open area."""
 
-    firstMoveMood = structures.Mood.SAFE if game.me.health > 12 else structures.Mood.RISKY # take riskier paths to the food if we're starving
+    firstMoveMood = structures.Mood.SAFE if game.me.health > 10 else structures.Mood.RISKY # take riskier paths to the food if we're starving
     validHeadMoves = game.getMoves(game.me.head, structures.Mood.RISKY)
 
     paths = []
@@ -56,7 +56,10 @@ def eat(game: structures.Game) -> str:
         dist = len(path) / maxDistance
         areaSize = game.uf.getSize(path[0]) / (game.height * game.width)
         print("food", dist, areaSize) # TODO
-        return (0.3 * (1 - dist)) + (0.7 * areaSize)
+        if game.me.health < 20:
+            return (0.4 * (1 - dist)) + (0.6 * areaSize) # prioritize closer food if health is getting low
+        else:
+            return (0.3 * (1 - dist)) + (0.7 * areaSize) # otherwise, care more about area size
 
     bestMove = max(paths, key=score)[0]
 
