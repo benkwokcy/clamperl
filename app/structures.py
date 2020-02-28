@@ -116,7 +116,7 @@ class Snake:
         self.middle = { Point(c) for c in body[1:-1] } # everything except the head and the tail
         self.size = len(body)
         self.health = data["health"]
-        self.ate = self.size >= 2 and body[-1] == body[-2] # just ate food so there is a body part on top of the tail
+        self.ate = (self.size >= 2) and (body[-1] == body[-2]) # just ate food so there is a body part on top of the tail
 
 class Game:
     """Contains the game board and all objects on the board.
@@ -129,7 +129,7 @@ class Game:
         self.me = Snake(data["you"])
         self.enemies = [Snake(d) for d in data["board"]["snakes"]] 
         self.food = [] # minheap of food with distance as key
-        self.uf = None # union find of connected areas on the board
+        self.uf = UnionFind(self.board) # union find of connected areas on the board
 
         # myself
         self.setState(self.me.head, State.SELF_BODY)
@@ -151,7 +151,6 @@ class Game:
             self.setState(enemy.tail, State.ENEMY_BODY if enemy.ate else State.ENEMY_TAIL) # if just ate, the tail has a body part on top of it
 
         # calculate reachable areas
-        self.uf = UnionFind(self.board)
         for row in range(self.height):
             for col in range(self.width):
                 p = Point({"x": col, "y": row})
@@ -164,20 +163,20 @@ class Game:
         for coordinates in data["board"]["food"]:
             point = Point(coordinates)
             self.setState(point, State.FOOD)
-            if any([self.uf.connected(x, point) for x in validHeadMoves]): # only push food reachable from the head
+            if any([self.uf.connected(x, point) for x in validHeadMoves]): # if any food reachable from the head
                 # we want food that is close but we also want food that is in a big open area
                 normalizedDistance = point.distance(self.me.head) / (self.height + self.width)
                 normalizedAreaSize = self.uf.getSize(point) / (self.height * self.width)
                 weightedAverage = ((normalizedDistance * 0.3) - (normalizedAreaSize * 0.7)) / 2 # you can fiddle with these weights
-                heapq.heappush(self.food, (weightedAverage, point)) 
+                heapq.heappush(self.food, (weightedAverage, point)) # this is a min-heap so it will pop the *smallest* weightAverage
 
     def setState(self, point: Point, state: State):
         """Set a state at a point, if the risk is higher or the point is empty."""
         boardState = self.board[point.y][point.x]
-        if boardState == State.EMPTY or getRisk(state) > getRisk(self.board[point.y][point.x]):
+        if boardState == State.EMPTY or getRisk(state) > getRisk(boardState):
             self.board[point.y][point.x] = state
 
-    def setStates(self, points, state):
+    def setStates(self, points: List[State], state: State):
         """Same as setState but takes a list of points."""
         for point in points:
             self.setState(point, state)
