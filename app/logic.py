@@ -34,18 +34,35 @@ def getMove(data: dict) -> (structures.Direction, Mode):
     return (move, Mode.random)
 
 def eat(game: structures.Game) -> str:
-    """Move towards food."""
-    firstMoveMood = structures.Mood.SAFE if game.me.health > 10 else structures.Mood.RISKY # take riskier paths to the food if we're starving
-    pathMood = structures.Mood.RISKY
+    """Move towards food that is reachable, nearby, and in a big open area."""
 
-    while game.food:
-        _, point = heapq.heappop(game.food)
-        path = game.aStar(point, firstMoveMood, pathMood) 
-        if path and len(path) <= game.me.health: # if len(path) is greater, we'll die before we get there 
-            return game.directionFromHead(path[0])
+    firstMoveMood = structures.Mood.SAFE if game.me.health > 12 else structures.Mood.RISKY # take riskier paths to the food if we're starving
+    validHeadMoves = game.getMoves(game.me.head, structures.Mood.RISKY)
 
-    # although game.food only contains food that is technically reachable, it's possible there's no path that obeys the given mood.
-    return None
+    paths = []
+    maxDistance = 0
+    for point in game.food:
+        if any([game.uf.connected(x, point) for x in validHeadMoves]): # food is reachable
+            path = game.aStar(point, firstMoveMood, structures.Mood.RISKY) 
+            if path and len(path) <= game.me.health: # if len(path) is greater, we'll die before we get there
+                paths.append(path)
+                maxDistance = max(maxDistance, len(path))
+
+    if not paths:
+        return None
+
+    def score(path):
+        """We want the closest food that is also in a big open area."""
+        dist = len(path) / maxDistance
+        areaSize = game.uf.getSize(path[0]) / (game.height * game.width)
+
+        print("food", dist, areaSize) # TODO
+
+        return (0.3 * (1 - dist)) + (0.7 * areaSize)
+
+    bestMove = max(paths, key=score)[0]
+
+    return game.directionFromHead(bestMove)
 
 def defend(game: structures.Game) -> str:
     """Go to the safest location."""
@@ -53,13 +70,13 @@ def defend(game: structures.Game) -> str:
     if not moves:
         return None
 
-    # we want a low risk move in big area
     def _key(p: structures.Point) -> int:
         nonlocal game
-        normalizedRisk = structures.getRisk(game.getState(p)) / 6
-        normalizedAreaSize = game.uf.getSize(p) / (game.height * game.width)
-        return (normalizedRisk * 0.7) - (normalizedAreaSize * 0.1) - (game.simulateMove(p) * 0.2)
+        risk = structures.getRisk(game.getState(p))
+        area = game.simulateMove(p)
+        print("defend", risk, area) # TODO
+        return (0.7 * (1 - risk)) + (0.3 * area)
 
-    bestMove = min(moves, key=_key) 
+    bestMove = max(moves, key=_key)
 
     return game.directionFromHead(bestMove)

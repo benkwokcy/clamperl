@@ -38,13 +38,13 @@ def getRisk(state: State) -> int:
         # SAFE
         State.FOOD: 0, # grab food if possible
         State.SELF_TAIL: 1,
-        State.ENEMY_HEAD_AREA_WEAK: 1, 
+        State.ENEMY_HEAD_AREA_WEAK: 1, # head on collision will kill the other snake.
         State.EMPTY: 2,
         State.ENEMY_TAIL: 3,
 
         # POSSIBLE DEATH
-        State.ENEMY_HEAD_AREA_EQUAL: 4, 
-        State.ENEMY_HEAD_AREA_STRONG: 5, 
+        State.ENEMY_HEAD_AREA_EQUAL: 4, # head on collision will kill both of us.
+        State.ENEMY_HEAD_AREA_STRONG: 5, # head on collision will kill our snake.
 
         # DEFINITE DEATH
         State.ENEMY_BODY: 6,
@@ -116,7 +116,7 @@ class Game:
         self.board = [[State.EMPTY] * self.width for _ in range(self.height)]
         self.me = Snake(data["you"])
         self.enemies = [Snake(d) for d in data["board"]["snakes"]] 
-        self.food = [] # minheap of food with distance as key
+        self.food = []
         self.uf = UnionFind(self.board) # connected areas
 
         # myself
@@ -124,9 +124,13 @@ class Game:
         self.setStates(self.me.middle, State.SELF_BODY)
         self.setState(self.me.tail, State.SELF_BODY if self.me.ate else State.SELF_TAIL) # if just ate, the tail has a body part on top of it
 
+        # food
+        for coordinates in data["board"]["food"]:
+            self.food.append(Point(coordinates))
+            self.setState(Point(coordinates), State.FOOD)
+
         # enemies
         for enemy in self.enemies:
-            # head on collisions kill the snake who is smaller. Equal lengths means both snakes die.
             for move in self.getMoves(enemy.head, Mood.RISKY):
                 if self.me.size > enemy.size:
                     self.setState(move, State.ENEMY_HEAD_AREA_WEAK)
@@ -145,20 +149,6 @@ class Game:
                 if getRisk(self.getState(p)) <= Mood.RISKY.value: 
                     for neighbour in self.getMoves(p, Mood.RISKY):
                         self.uf.union(p, neighbour)
-
-        # food
-        validHeadMoves = self.getMoves(self.me.head, Mood.RISKY)
-        for coordinates in data["board"]["food"]:
-            point = Point(coordinates)
-            self.setState(point, State.FOOD)
-            # only consider food reachable from the head
-            # TODO - theoretically even if the path to the food is blocked now, we can still get there as long as the path clears up as we move
-            if any([self.uf.connected(x, point) for x in validHeadMoves]): 
-                # we want food that is close but we also want food that is in a big open area
-                normalizedDistance = point.distance(self.me.head) / (self.height + self.width)
-                normalizedAreaSize = self.uf.getSize(point) / (self.height * self.width)
-                weightedAverage = ((normalizedDistance * 0.3) - (normalizedAreaSize * 0.7)) / 2 # you can fiddle with these weights
-                heapq.heappush(self.food, (weightedAverage, point)) # this is a min-heap so it will pop the *smallest* weightAverage
 
     def setState(self, point: Point, state: State):
         """Set a state at a point, if the risk is higher or the point is empty."""
@@ -217,37 +207,42 @@ class Game:
         if self.getState(self.me.tail) == State.SELF_TAIL:
             self.board[self.me.tail.y][self.me.tail.x] = State.EMPTY
 
-        areaScore = self.getAreaSize(move, Mood.SAFE) / self.me.size
-        if areaScore > 1.0:
-            areaScore = 1.0
-        moveScore = 0.0
-        for move in self.getMoves(move, Mood.RISKY):
-            risk = getRisk(self.getState(move))
-            if risk <= Mood.SAFE.value:
-                moveScore += 1
-            elif risk <= Mood.RISKY.value:
-                moveScore += 0.25
-        moveScore = moveScore / 4
+        safeSize, riskySize = self.getAreaSize(move)
+
+        if riskySize == 0:
+            return -1
+        if safeSize == 0:
+            return -0.5
 
         # restore original board state
         self.board[self.me.tail.y][self.me.tail.x] = originalTailState
 
-        return (areaScore + moveScore) / 2
+        return ((0.7 * safeSize) + (0.3 * riskySize)) / self.me.size
 
-    def getAreaSize(self, p: Point, mood: Mood) -> int:
-        """Use this instead of UnionFind if you only care
-        about the size of a single connected area."""
+    def getAreaSize(self, p: Point) -> (int, int):
+        """Area size not including the given point.
+        
+        Use this instead of UnionFind if you only care
+        about the size of a single connected area.
+        """
         seen = set([p])
         stack = [p]
 
+        safeSize = 0
+        riskySize = 0
+
         while stack:
             curr = stack.pop()
-            for neighbour in self.getMoves(curr, mood):
+            for neighbour in self.getMoves(curr, Mood.RISKY):
                 if neighbour not in seen:
                     seen.add(neighbour)
                     stack.append(neighbour)
-        
-        return len(seen) - 1
+                    if getRisk(self.getState(neighbour)) <= Mood.SAFE.value:
+                        safeSize += 1
+                    if getRisk(self.getState(neighbour)) <= Mood.RISKY.value:
+                        riskySize += 1
+
+        return (safeSize, riskySize)
 
     def aStar(self, dest: Point, firstMoveMood: Mood, pathMood: Mood) -> List[Point]:
         """A* Algorithm.
@@ -309,6 +304,7 @@ class Game:
         result = ["\n"]
         for row in self.board:
             result.append("[" + "|".join([symbol(state) for state in row]) + "]")
+        result.append(f"Health: {self.me.health}")
 
         return "\n".join(result)
 
