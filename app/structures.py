@@ -182,6 +182,9 @@ class Game:
         # All moves that are inside the board and have risk <= mood
         moves = [m for m in moves if isValid(m) and getRisk(self.getState(m)) <= mood.value]
 
+        # If we don't shuffle, snake moves in predictable patterns when heuristics are tied for all moves
+        random.shuffle(moves)
+
         return moves
 
     def directionFromHead(self, point: Point) -> str:
