@@ -275,8 +275,8 @@ class UnionFind:
         self.size = [1 for i in range(self.height * self.width)]
 
     def union(self, p1: Point, p2: Point):
-        parent1 = self.find(p1)
-        parent2 = self.find(p2)
+        parent1 = self._find(p1)
+        parent2 = self._find(p2)
 
         if parent1 == parent2:
             return
@@ -288,21 +288,21 @@ class UnionFind:
         else:
             self.id[parent1] = parent2
             self.size[parent2] += self.size[parent1]
+
+    def connected(self, p1: Point, p2: Point) -> bool:
+        return self._find(p1) == self._find(p2)
     
-    def find(self, p: Point) -> int:
-        p = self.getIndex(p)
+    def getSize(self, point: Point) -> int:
+        return self.size[self._find(point)]
+
+    def _find(self, p: Point) -> int:
+        p = self._getIndex(p)
 
         while p != self.id[p]:
             self.id[p] = self.id[self.id[p]] # path compression - make every other node point to its grandparent
             p = self.id[p]
         
         return p
-
-    def connected(self, p1: Point, p2: Point) -> bool:
-        return self.find(p1) == self.find(p2)
-
-    def getIndex(self, point: Point) -> int:
-        return (point.y * self.width) + point.x
     
-    def getSize(self, point: Point) -> int:
-        return self.size[self.find(point)]
+    def _getIndex(self, point: Point) -> int:
+        return (point.y * self.width) + point.x
