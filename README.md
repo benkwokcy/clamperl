@@ -36,5 +36,5 @@ git push heroku
 
 ## To Do
 
-- Try a few moves into the future and pick the best one
-  - Parallelize these computations
+- Snake is doing different things in arena than in my unit tests
+- Try a few moves into the future (use multiprocessing?) and pick the best one
