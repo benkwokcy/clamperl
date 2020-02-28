@@ -111,8 +111,8 @@ class Game:
     This is the main data structure for making decisions about the game.
     """
     def __init__(self, data: dict):
-        self.id = data.get("game", { "id": 0 })["id"]
-        self.turn = data.get("turn", 0)
+        self.id = data.get("game", { "id": "0" })["id"]
+        self.turn = data.get("turn", "0")
         self.height = data["board"]["height"]
         self.width = data["board"]["width"]
         self.board = [[State.EMPTY] * self.width for _ in range(self.height)]
