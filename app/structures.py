@@ -12,9 +12,10 @@ class Direction(Enum):
     LEFT = "left"
     RIGHT = "right"
 
-def randomDirection():
-    """Use this if we're going to die no matter what."""
-    return random.choice([d.value for d in Direction])
+    @staticmethod # don't need to create instance to call this
+    def randomDirection():
+        """Use this if we're going to die no matter what."""
+        return random.choice([d.value for d in Direction])
 
 class Mood(Enum):
     """Sets the maximum riskiness allowed by getMoves.

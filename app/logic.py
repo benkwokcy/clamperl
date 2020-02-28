@@ -26,7 +26,7 @@ def getMove(data: dict) -> structures.Direction:
         return move
 
     # No moves where we survive.
-    move = structures.randomDirection()
+    move = structures.Direction.randomDirection()
     print(f"Random - {move}")
     return 
 
