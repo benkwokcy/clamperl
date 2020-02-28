@@ -35,17 +35,16 @@ def getMove(data: dict) -> (structures.Direction, Mode):
 
 def eat(game: structures.Game) -> str:
     """Move towards food."""
-
-    mood = structures.Mood.SAFE
-    if game.me.health <= 25: # take riskier paths to the food if we're starving
-        mood = structures.Mood.RISKY
+    firstMoveMood = structures.Mood.SAFE if game.me.health > 10 else structures.Mood.RISKY # take riskier paths to the food if we're starving
+    pathMood = structures.Mood.RISKY
 
     while game.food:
         _, point = heapq.heappop(game.food)
-        path = game.aStar(point, mood)
-        if path:
+        path = game.aStar(point, firstMoveMood, pathMood) 
+        if path and len(path) <= game.me.health: # if len(path) is greater, we'll die before we get there 
             return game.directionFromHead(path[0])
 
+    # although game.food only contains food that is technically reachable, it's possible there's no path that obeys the given mood.
     return None
 
 def defend(game: structures.Game) -> str:
@@ -58,7 +57,7 @@ def defend(game: structures.Game) -> str:
     def _key(p: structures.Point) -> int:
         nonlocal game
         risk = structures.getRisk(game.getState(p))
-        normalizedAreaSize = game.uf.getSize(p) / (game.height * game.width)
+        normalizedAreaSize = game.ufRisky.getSize(p) / (game.height * game.width)
         return risk - normalizedAreaSize
 
     bestMove = min(moves, key=_key) 

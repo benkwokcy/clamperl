@@ -70,18 +70,6 @@ class Point:
         self.x = data["x"]
         self.y = data["y"]
         self.tup = (self.x, self.y)
-
-    def allMoves(self):
-        """Returns points for up, down, left, right."""
-        moves = [
-            Point({"x": self.x, "y": self.y-1}),
-            Point({"x": self.x, "y": self.y+1}),
-            Point({"x": self.x-1, "y": self.y}),
-            Point({"x": self.x+1, "y": self.y})
-        ]
-        random.shuffle(moves) # snake tends to move in the same pattern if we don't randomize
-
-        return moves
     
     def distance(self, other):
         """Manhattan distance between this point and another point."""
@@ -129,7 +117,8 @@ class Game:
         self.me = Snake(data["you"])
         self.enemies = [Snake(d) for d in data["board"]["snakes"]] 
         self.food = [] # minheap of food with distance as key
-        self.uf = UnionFind(self.board) # union find of connected areas on the board
+        self.ufRisky = UnionFind(self.board) # connected areas assuming no snakes move in my way
+        self.ufSafe = UnionFind(self.board) # connected areas assuming alll snakes move in my way
 
         # myself
         self.setState(self.me.head, State.SELF_BODY)
@@ -156,17 +145,22 @@ class Game:
                 p = Point({"x": col, "y": row})
                 if getRisk(self.getState(p)) <= Mood.RISKY.value: 
                     for neighbour in self.getMoves(p, Mood.RISKY):
-                        self.uf.union(p, neighbour)
+                        self.ufRisky.union(p, neighbour)
+                if getRisk(self.getState(p)) <= Mood.SAFE.value: 
+                    for neighbour in self.getMoves(p, Mood.SAFE):
+                        self.ufSafe.union(p, neighbour)
 
         # food
         validHeadMoves = self.getMoves(self.me.head, Mood.RISKY)
         for coordinates in data["board"]["food"]:
             point = Point(coordinates)
             self.setState(point, State.FOOD)
-            if any([self.uf.connected(x, point) for x in validHeadMoves]): # if any food reachable from the head
+            # only consider food reachable from the head
+            # TODO - theoretically even if the path to the food is blocked now, we can still get there as long as the path clears up as we move
+            if any([self.ufRisky.connected(x, point) for x in validHeadMoves]): 
                 # we want food that is close but we also want food that is in a big open area
                 normalizedDistance = point.distance(self.me.head) / (self.height + self.width)
-                normalizedAreaSize = self.uf.getSize(point) / (self.height * self.width)
+                normalizedAreaSize = self.ufRisky.getSize(point) / (self.height * self.width)
                 weightedAverage = ((normalizedDistance * 0.3) - (normalizedAreaSize * 0.7)) / 2 # you can fiddle with these weights
                 heapq.heappush(self.food, (weightedAverage, point)) # this is a min-heap so it will pop the *smallest* weightAverage
 
@@ -188,12 +182,19 @@ class Game:
     def getMoves(self, point: Point, mood: Mood) -> List[Point]:
         """Get all valid moves from a point that have risk <= mood."""
 
-        def _isValid(point: Point) -> bool:
+        def isValid(point: Point) -> bool:
             """Check if a point is within the game board boundaries."""
             return 0 <= point.x < self.width and 0 <= point.y < self.height
 
-        # All moves that are inside the board and have risk <= mood.
-        moves = [m for m in point.allMoves() if _isValid(m) and getRisk(self.getState(m)) <= mood.value]
+        moves = [ 
+            Point({"x": point.x, "y": point.y-1}), 
+            Point({"x": point.x, "y": point.y+1}), 
+            Point({"x": point.x-1, "y": point.y}), 
+            Point({"x": point.x+1, "y": point.y})
+        ]
+
+        # All moves that are inside the board and have risk <= mood
+        moves = [m for m in moves if isValid(m) and getRisk(self.getState(m)) <= mood.value]
 
         return moves
 
@@ -211,10 +212,14 @@ class Game:
 
         return directions[point.tup].value
 
-    def aStar(self, dest: Point, mood: Mood) -> List[Point]:
+    def aStar(self, dest: Point, firstMoveMood: Mood, pathMood: Mood) -> List[Point]:
         """A* Algorithm.
         Figures out the shortest path to a destination from the head.
         Heuristic is the "manhattan" distance to the destination point.
+        
+        Takes two moods.
+        firstMoveMood = maximum risk level allowed for the first move from the head.
+        pathMood = maximum risk level allowed for remaining moves in the path.
         """
 
         def _getPath(parent: Point, dest: Point) -> List[Point]:
@@ -241,13 +246,34 @@ class Game:
             _, move = heapq.heappop(heap)
             if move == dest:
                 return _getPath(parent, dest) # path found
-            for neighbour in self.getMoves(move, mood):
+            for neighbour in self.getMoves(move, firstMoveMood if move == head else pathMood):
                 if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
                     parent[neighbour] = move
                     pathCost[neighbour.tup] = pathCost[move.tup] + 1
                     heapq.heappush(heap, (pathCost[neighbour.tup] + dest.distance(neighbour), neighbour))
 
         return None # no path to destination
+
+    def __str__(self):
+        """Overrides the print representation."""
+
+        def symbol(state):
+            if state == State.FOOD:
+                return "F"
+            elif state == State.SELF_BODY:
+                return "+"
+            elif state == State.SELF_TAIL:
+                return ">"
+            elif state in (State.ENEMY_BODY, State.ENEMY_TAIL):
+                return "X"
+            else:
+                return " "
+
+        result = ["\n"]
+        for row in self.board:
+            result.append("[" + "|".join([symbol(state) for state in row]) + "]")
+
+        return "\n".join(result)
 
 class UnionFind:
     """Weighted UnionFind with Path Compression.
