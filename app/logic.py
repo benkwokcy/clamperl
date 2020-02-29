@@ -53,8 +53,11 @@ def eat(game: structures.Game) -> str:
 
     def score(path: List[structures.Point]) -> structures.Point:
         """We want the closest food that is also in a big open area."""
+
+        # these are normalized to [0,1]
         dist = len(path) / maxDistance
         areaSize = game.uf.getSize(path[0]) / (game.height * game.width)
+
         if game.me.health < 20:
             return (0.4 * (1 - dist)) + (0.6 * areaSize) # prioritize closer food if health is getting low
         else:

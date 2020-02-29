@@ -219,8 +219,12 @@ class Game:
         return directions[point.tup].value
     
     def simulateMove(self, move: Point) -> float:
-        """Simulates one move into the future and
-        returns the risk of the future.
+        """Simulate one move into the future and return the estimated risk of that future state.
+
+        We calculate multiple future states and take the average score.
+        In each future, our snake takes the given move and the enemy snakes take a random move.
+        The score is based on the size of the area our snake ends up in. We prefer areas connected by
+        safe moves.
         """
         originalBoard = [row[:] for row in self.board] # deep copy of board state
         scores = 0.0
@@ -266,7 +270,8 @@ class Game:
         return scores / numFutures
 
     def getAreaSize(self, p: Point, mood: Mood) -> int:
-        """Area size not including the given point.
+        """Area size not including the given point, 
+        if we only take points obeying the given mood.
         
         Use this instead of UnionFind if you only care
         about the size of a single connected area.
@@ -293,6 +298,9 @@ class Game:
         Takes two moods.
         firstMoveMood = maximum risk level allowed for the first move from the head.
         pathMood = maximum risk level allowed for remaining moves in the path.
+
+        For example, we find paths where the first move is safe and the rest of the
+        moves are risky.
         """
 
         def getPath(parent: Point, dest: Point) -> List[Point]:

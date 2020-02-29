@@ -5,7 +5,7 @@ import json
 from app import logic, structures
 
 class TestGetMove(unittest.TestCase):
-    """Test template:
+    """Test Template:
     def test_<NAME>(self):
         mock = formatJson(<JSON RESPONSE STRING>)
         self.assertEqual(<ACTUAL RESULT>, <EXPECTED RESULT>, msg=str(structures.Game(mock)))
@@ -79,9 +79,10 @@ def formatJson(response: str) -> dict:
     """Convert the raw json response from Battlesnake Online Engine
     into a dictionary that is accepted by our Game board matrix. 
 
-    You can grab these json responses from
-    Developer Tools -> Network -> Websockets -> Messages. These responses
-    can be imported here and turned into unit tests.
+    You can grab these json responses from your browser at
+    Developer Tools -> Network -> Websockets -> Messages. 
+
+    These responses can be imported here and turned into unit tests.
     """
 
     def formatList(l):
