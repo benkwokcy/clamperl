@@ -12,22 +12,24 @@ class Direction(Enum):
     LEFT = "left"
     RIGHT = "right"
 
-    @staticmethod # don't need to create instance to call this
+    @staticmethod # suppresses no 'self' reference warning
     def randomDirection():
         """Use this if we're going to die no matter what."""
         return random.choice([d.value for d in Direction])
 
 class State(Enum):
     """Each 1x1 square on the game board is given a state."""
-    SELF_TAIL = auto()
     EMPTY = auto()
     FOOD = auto()
-    ENEMY_TAIL = auto()
+    SELF_HEAD = auto()
+    SELF_BODY = auto()
+    SELF_TAIL = auto()
+    ENEMY_HEAD = auto()
     ENEMY_HEAD_AREA_WEAK = auto() # a point reachable by an enemy head who's length is less than ours
     ENEMY_HEAD_AREA_EQUAL = auto() # a point reachable by an enemy head who's length is equal to ours
     ENEMY_HEAD_AREA_STRONG = auto() # a point reachable by an enemy head who's length is greater than ours
-    SELF_BODY = auto()
     ENEMY_BODY = auto()
+    ENEMY_TAIL = auto()
 
 def getRisk(state: State) -> int:
     """Assign a riskiness value to each state.
@@ -47,8 +49,10 @@ def getRisk(state: State) -> int:
         State.ENEMY_HEAD_AREA_STRONG: 5, # head on collision will kill our snake.
 
         # DEFINITE DEATH
-        State.ENEMY_BODY: 6,
+        State.SELF_HEAD: 6,
         State.SELF_BODY: 6,
+        State.ENEMY_HEAD: 6,
+        State.ENEMY_BODY: 6
     }
 
     return risk[state]
@@ -70,7 +74,19 @@ class Point:
         self.x = data["x"]
         self.y = data["y"]
         self.tup = (self.x, self.y)
-    
+
+    def left(self):
+        return Point({"x": self.x-1, "y": self.y})
+
+    def right(self):
+        return Point({"x": self.x+1, "y": self.y})
+
+    def up(self):
+        return Point({"x": self.x, "y": self.y-1})
+
+    def down(self):
+        return Point({"x": self.x, "y": self.y+1})
+
     def distance(self, other) -> int:
         """Manhattan distance between this point and another point."""
         return abs(self.x - other.x) + abs(self.y - other.y)
@@ -97,7 +113,6 @@ class Point:
 class Snake:
     def __init__(self, data: dict):
         body = data["body"]
-
         self.name = data["name"]
         self.head = Point(body[0])
         self.tail = Point(body[-1])
@@ -122,7 +137,7 @@ class Game:
         self.uf = UnionFind(self.board) # connected areas
 
         # myself
-        self.setState(self.me.head, State.SELF_BODY)
+        self.setState(self.me.head, State.SELF_HEAD)
         self.setStates(self.me.middle, State.SELF_BODY)
         self.setState(self.me.tail, State.SELF_BODY if self.me.ate else State.SELF_TAIL) # if just ate, the tail has a body part on top of it
 
@@ -140,7 +155,7 @@ class Game:
                     self.setState(move, State.ENEMY_HEAD_AREA_EQUAL)
                 else:
                     self.setState(move, State.ENEMY_HEAD_AREA_STRONG)
-            self.setState(enemy.head, State.ENEMY_BODY)
+            self.setState(enemy.head, State.ENEMY_HEAD)
             self.setStates(enemy.middle, State.ENEMY_BODY)
             self.setState(enemy.tail, State.ENEMY_BODY if enemy.ate else State.ENEMY_TAIL) # if just ate, the tail has a body part on top of it
 
@@ -193,10 +208,10 @@ class Game:
         """Given a valid move from the head, return its direction as a string."""
         head = self.me.head
         directions = {
-            (head.x, head.y-1): Direction.UP,
-            (head.x, head.y+1): Direction.DOWN,
-            (head.x-1, head.y): Direction.LEFT,
-            (head.x+1, head.y): Direction.RIGHT,
+            head.up().tup: Direction.UP,
+            head.down().tup: Direction.DOWN,
+            head.left().tup: Direction.LEFT,
+            head.right().tup: Direction.RIGHT,
         }
 
         assert (point.tup in directions), "Point wasn't a valid move from head."
@@ -207,28 +222,50 @@ class Game:
         """Simulates one move into the future and
         returns the risk of the future.
         """
-        # change board state
-        originalTailState = self.board[self.me.tail.y][self.me.tail.x]
-        if self.getState(self.me.tail) == State.SELF_TAIL:
-            self.board[self.me.tail.y][self.me.tail.x] = State.EMPTY
+        originalBoard = [row[:] for row in self.board] # deep copy of board state
+        scores = 0.0
+        numFutures = 10
 
-        safeSize, riskySize = self.getAreaSize(move)
+        # we will calculate numFutures futures and take the average
+        for _ in range(numFutures):
 
-        # restore board state
-        self.board[self.me.tail.y][self.me.tail.x] = originalTailState
+            # set up future board state
+            if self.getState(self.me.tail) == State.SELF_TAIL:
+                self.board[self.me.tail.y][self.me.tail.x] = State.EMPTY
+            self.setState(self.me.head, State.SELF_BODY)
+            self.setState(move, State.SELF_HEAD)
 
-        averageSize = ((0.7 * safeSize) + (0.3 * riskySize))
+            for enemy in self.enemies:
+                if self.getState(enemy.tail) == State.ENEMY_TAIL:
+                    self.board[enemy.tail.y][enemy.tail.x] = State.EMPTY            
+                self.setState(enemy.head, State.SELF_BODY)
+                possibleMoves = self.getMoves(enemy.head, Mood.RISKY)
+                if possibleMoves:
+                    enemyMove = random.choice(possibleMoves)
+                    self.setState(enemyMove, State.ENEMY_HEAD)
+                    for p in self.getMoves(enemyMove, Mood.SAFE):
+                        self.setState(p, State.ENEMY_HEAD_AREA_STRONG if enemy.size > self.me.size else State.ENEMY_HEAD_AREA_EQUAL)
 
-        if riskySize == 0:
-            return 6.0
-        if safeSize == 0:
-            return 5.0
-        if averageSize <= self.me.size:
-            return 4.0
-        
-        return self.me.size / averageSize * 4
+            # calculate area sizes
+            safeSize = self.getAreaSize(move, Mood.SAFE)
+            riskySize = self.getAreaSize(move, Mood.RISKY)
+            averageSize = ((0.7 * safeSize) + (0.3 * riskySize))
 
-    def getAreaSize(self, p: Point) -> (int, int):
+            if riskySize == 0:
+                scores += 6.0
+            elif safeSize == 0:
+                scores += 5.0
+            elif averageSize <= self.me.size:
+                scores += 4.0
+            else:
+                scores += self.me.size / averageSize * 4
+
+            # restore board state
+            self.board = originalBoard
+
+        return scores / numFutures
+
+    def getAreaSize(self, p: Point, mood: Mood) -> int:
         """Area size not including the given point.
         
         Use this instead of UnionFind if you only care
@@ -236,22 +273,17 @@ class Game:
         """
         seen = set([p])
         stack = [p]
-
-        safeSize = 0
-        riskySize = 0
+        size = 0
 
         while stack:
             curr = stack.pop()
-            for neighbour in self.getMoves(curr, Mood.RISKY):
+            for neighbour in self.getMoves(curr, mood):
                 if neighbour not in seen:
                     seen.add(neighbour)
                     stack.append(neighbour)
-                    if getRisk(self.getState(neighbour)) <= Mood.SAFE.value:
-                        safeSize += 1
-                    if getRisk(self.getState(neighbour)) <= Mood.RISKY.value:
-                        riskySize += 1
+                    size += 1
 
-        return (safeSize, riskySize)
+        return size
 
     def aStar(self, dest: Point, firstMoveMood: Mood, pathMood: Mood) -> List[Point]:
         """A* Algorithm.
@@ -301,12 +333,18 @@ class Game:
         def symbol(state: State) -> str:
             if state == State.FOOD:
                 return "F"
+            elif state == State.SELF_HEAD:
+                return "@"
             elif state == State.SELF_BODY:
                 return "+"
             elif state == State.SELF_TAIL:
                 return ">"
-            elif state in (State.ENEMY_BODY, State.ENEMY_TAIL):
+            elif state == State.ENEMY_HEAD:
+                return "@"
+            elif state == State.ENEMY_BODY:
                 return "X"
+            elif state == State.ENEMY_TAIL:
+                return "<"
             else:
                 return " "
 
