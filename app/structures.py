@@ -71,7 +71,7 @@ class Point:
         self.y = data["y"]
         self.tup = (self.x, self.y)
     
-    def distance(self, other: Point) -> int:
+    def distance(self, other) -> int:
         """Manhattan distance between this point and another point."""
         return abs(self.x - other.x) + abs(self.y - other.y)
     
@@ -79,14 +79,14 @@ class Point:
         """Overrides the print representation."""
         return str(self.tup)
     
-    def __eq__(self, other: Point) -> bool:
+    def __eq__(self, other) -> bool:
         """Override equality."""
         if type(other) is type(self):
             return self.tup == other.tup
         else:
             return False
     
-    def __lt__(self, other: Point) -> bool:
+    def __lt__(self, other) -> bool:
         """Needed to break ties in heapq"""
         return sum(self.tup) < sum(other.tup)
     
