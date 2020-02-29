@@ -54,7 +54,8 @@ git push heroku
 ## To Do
 
 - Snake is doing different things in arena than in my unit tests
-  - Moves are not deterministic because of the random shuffling
+  - Moves are not deterministic because of the random shuffling?
+  - Snake is timing out?
 - Look further in the future.
   - Use multiprocessing to parallelize
 - Generalize data structures so I can look up the best move for any snake, not just myself
