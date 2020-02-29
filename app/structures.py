@@ -71,26 +71,26 @@ class Point:
         self.y = data["y"]
         self.tup = (self.x, self.y)
     
-    def distance(self, other):
+    def distance(self, other: Point) -> int:
         """Manhattan distance between this point and another point."""
         return abs(self.x - other.x) + abs(self.y - other.y)
     
-    def __str__(self):
+    def __str__(self) -> str:
         """Overrides the print representation."""
         return str(self.tup)
     
-    def __eq__(self, other):
+    def __eq__(self, other: Point) -> bool:
         """Override equality."""
         if type(other) is type(self):
             return self.tup == other.tup
         else:
             return False
     
-    def __lt__(self, other):
+    def __lt__(self, other: Point) -> bool:
         """Needed to break ties in heapq"""
         return sum(self.tup) < sum(other.tup)
     
-    def __hash__(self):
+    def __hash__(self) -> int:
         """Since we override equality, we need to ensure equivalent objects have identical hashes."""
         return hash(self.tup)
 
@@ -220,11 +220,11 @@ class Game:
         averageSize = ((0.7 * safeSize) + (0.3 * riskySize))
 
         if riskySize == 0:
-            return 6
+            return 6.0
         if safeSize == 0:
-            return 5
+            return 5.0
         if averageSize <= self.me.size:
-            return 4
+            return 4.0
         
         return self.me.size / averageSize * 4
 
@@ -263,7 +263,7 @@ class Game:
         pathMood = maximum risk level allowed for remaining moves in the path.
         """
 
-        def _getPath(parent: Point, dest: Point) -> List[Point]:
+        def getPath(parent: Point, dest: Point) -> List[Point]:
             """Reconstruct path from a parent pointer array.
             Path returned does not include the source.
             """
@@ -286,7 +286,7 @@ class Game:
         while heap:
             _, move = heapq.heappop(heap)
             if move == dest:
-                return _getPath(parent, dest) # path found
+                return getPath(parent, dest) # path found
             for neighbour in self.getMoves(move, firstMoveMood if move == head else pathMood):
                 if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
                     parent[neighbour] = move
@@ -295,10 +295,10 @@ class Game:
 
         return None # no path to destination
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Overrides the print representation."""
 
-        def symbol(state):
+        def symbol(state: State) -> str:
             if state == State.FOOD:
                 return "F"
             elif state == State.SELF_BODY:

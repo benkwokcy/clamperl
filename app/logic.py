@@ -51,7 +51,7 @@ def eat(game: structures.Game) -> str:
     if not paths:
         return None
 
-    def score(path):
+    def score(path: List[structures.Point]) -> structures.Point:
         """We want the closest food that is also in a big open area."""
         dist = len(path) / maxDistance
         areaSize = game.uf.getSize(path[0]) / (game.height * game.width)
