@@ -27,7 +27,7 @@ def start():
 def move():
     """Updates your snake with the current state of the game board and asks for a move."""
     data = bottle.request.json
-    print(data)
+    # print(data) # LOGGING
     direction = getMove(data)[0] # this is where the magic happens
 
     return bottle.HTTPResponse(
