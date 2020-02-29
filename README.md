@@ -1,18 +1,18 @@
 # huntail
 
-A snake AI for Battlesnake 2020. Based off the Python starter snake.
+A snake AI for Battlesnake 2020.
 
 ## File Structure
 
 - server.py - launch web server
 - tests.py - run unit tests
 - /app
-  - logic.py - logic for calculating moves
-  - structures.py - data structures for calculating moves
-- app.json - tell Heroku some random details
-- Procfile - tells Heroku how to run the app
-- requirements.txt - tells Heroku what dependencies to install
-- runtime.txt - tells Heroku which Python to use
+  - logic.py - higher level logic configuring how my snake behaves
+  - structures.py - data structures simulating the game state
+- app.json - tell Heroku descriptive details about the app
+- Procfile - tells Heroku the entry point for the app
+- requirements.txt - tells Heroku what dependencies to install when deploying
+- runtime.txt - tells Heroku which Python version to use
 
 ## Instructions
 
@@ -37,4 +37,7 @@ git push heroku
 ## To Do
 
 - Snake is doing different things in arena than in my unit tests
-- Try a few moves into the future (use multiprocessing?) and pick the best one
+  - Moves are not deterministic because of the random shuffling
+- Look further in the future.
+  - Use multiprocessing to parallelize
+- Generalize data structures so I can look up the best move for any snake, not just myself
