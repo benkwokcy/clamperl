@@ -7,7 +7,7 @@ A snake AI for Battlesnake 2020.
 Logic Overview:
 
 - If the snake is hungry, it will eat. Otherwise, it moves around defensively.
-  - If the snake is really hungry, it will take more risks to get food. 
+  - If the snake is really hungry, it will take more risks to get food.
   - If the snake isn't that hungry, it might act defensively until it's easier to reach food.
 - The snake likes to stay in a large open area.
 - The snake prefers safer moves over riskier moves.
@@ -51,11 +51,19 @@ Deploying to Heroku:
 git push heroku
 ```
 
-## To Do
+## Issues
+
+- Snake is timing out
+  - It's definitely timing out. The service times on Heroku are wrong. See Postman times.
+  - Timing out is coming from defend function. Eat is taking almost no time.
 
 - Snake is doing different things in arena than in my unit tests
+  - Reproduce bug by comparing unit tests against actual Postman calls
   - Moves are not deterministic because of the random shuffling?
-  - Snake is timing out?
+  - simulateFuture function is overriding the current risk too much?
+
+## To Do
+
 - Look further in the future.
   - Use multiprocessing to parallelize
 - Generalize data structures so I can look up the best move for any snake, not just myself
