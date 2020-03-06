@@ -42,7 +42,9 @@ def getMove(data: dict) -> (structures.Direction, Mode):
 def eat(game: structures.Game) -> str:
     """Move towards food that is reachable, nearby, and in a big open area."""
 
-    firstMoveMood = structures.Mood.SAFE if game.me.health > 10 else structures.Mood.RISKY # take riskier paths to the food if we're starving
+    # take riskier paths to the food if we're starving
+    firstMoveMood = structures.Mood.SAFE if game.me.health > 10 else structures.Mood.RISKY 
+    remainingMoveMood = structures.Mood.SAFE if game.me.health > 25 else structures.Mood.RISKY
     validHeadMoves = game.getMoves(game.me.head, structures.Mood.RISKY)
 
     paths = []
@@ -51,7 +53,7 @@ def eat(game: structures.Game) -> str:
         if any([game.uf.connected(x, point) for x in validHeadMoves]): # food is reachable
             if game.uf.getSize(point) < game.me.size and game.me.health > 25: # avoid areas smaller than us if not that hungry
                 continue
-            path = game.aStar(point, firstMoveMood, structures.Mood.RISKY) 
+            path = game.aStar(point, firstMoveMood, remainingMoveMood) 
             if path and len(path) <= game.me.health: # if len(path) is greater, we'll die before we get there
                 paths.append(path)
                 maxDistance = max(maxDistance, len(path))
