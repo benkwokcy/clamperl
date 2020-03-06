@@ -22,16 +22,16 @@ def getMove(data: dict) -> (structures.Direction, Mode):
     # Eat when food dips below threshold or our size is smaller than the average enemy
     smallerThanAverage = game.enemies and (game.me.size <= (sum([e.size for e in game.enemies]) / len(game.enemies)))
     if game.me.health < 50 or smallerThanAverage:
-        start_time = time.time() # TODO
+        # start_time = time.time() # RUNTIME LOGGING
         move = eat(game)
-        print("Eat took %f seconds" % (time.time() - start_time)) # TODO
+        # print("Eat took %f seconds" % (time.time() - start_time)) # RUNTIME LOGGING
         if move:
             return (move, Mode.hungry if game.me.health < 50 else Mode.grow)
 
     # Take the safest move.
-    start_time = time.time() # TODO
+    start_time = time.time() # RUNTIME LOGGING
     move = defend(game)
-    print("Defend took %f seconds" % (time.time() - start_time)) # TODO
+    print("Defend took %f seconds" % (time.time() - start_time)) # RUNTIME LOGGING
     if move:
         return (move, Mode.defend)
 
@@ -72,7 +72,7 @@ def eat(game: structures.Game) -> str:
     bestMove = max(paths, key=score)[0]
     bestMove = game.directionFromHead(bestMove)
 
-    print(f"game {game.id[:5]} - turn {game.turn} - eat {bestMove}") # TODO
+    # print(f"game {game.id[:5]} - turn {game.turn} - eat {bestMove}") # TODO
 
     return bestMove
 
@@ -91,6 +91,6 @@ def defend(game: structures.Game) -> str:
     bestMove = min(moves, key=_key)
     bestMove = game.directionFromHead(bestMove)
 
-    print(f"game {game.id[:5]} - turn {game.turn} - defend {bestMove}") # TODO
+    # print(f"game {game.id[:5]} - turn {game.turn} - defend {bestMove}") # TODO
 
     return bestMove

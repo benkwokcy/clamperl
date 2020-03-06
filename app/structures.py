@@ -2,9 +2,11 @@
 
 import heapq
 import random
+import time
+from collections import defaultdict
 from enum import Enum, auto
 from typing import List
-from collections import defaultdict
+
 
 class Direction(Enum):
     """The /move endpoint expects a string of this form."""
@@ -235,6 +237,7 @@ class Game:
         # we will calculate numFutures futures and take the average
         for _ in range(numFutures):
 
+            # start_time = time.time() # RUNTIME LOGGING
             # set up future board state
             if self.getState(self.me.tail) == State.SELF_TAIL:
                 self.board[self.me.tail.y][self.me.tail.x] = State.EMPTY
@@ -252,11 +255,14 @@ class Game:
                     self.setState(enemyMove, State.ENEMY_HEAD)
                     for p in self.getMoves(enemyMove, Mood.SAFE):
                         self.setState(p, State.ENEMY_HEAD_AREA_STRONG if enemy.size > self.me.size else State.ENEMY_HEAD_AREA_EQUAL)
+            # print("boardSetUp took %f seconds" % (time.time() - start_time)) # RUNTIME LOGGING
 
             # calculate area sizes
+            # start_time = time.time() # RUNTIME LOGGING
             safeSize = self.getAreaSize(move, Mood.SAFE)
             riskySize = self.getAreaSize(move, Mood.RISKY)
             averageSize = ((0.7 * safeSize) + (0.3 * riskySize))
+            # print("areaSize took %f seconds" % (time.time() - start_time)) # RUNTIME LOGGING
 
             if riskySize == 0:
                 scores += 6.0
