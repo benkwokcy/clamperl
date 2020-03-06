@@ -231,7 +231,7 @@ class Game:
         """
         originalBoard = [row[:] for row in self.board] # deep copy of board state
         scores = 0.0
-        numFutures = 4
+        numFutures = 3
         movesUsed = defaultdict(set)
 
         # we will calculate numFutures futures and take the average
