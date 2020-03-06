@@ -49,6 +49,8 @@ def eat(game: structures.Game) -> str:
     maxDistance = 0
     for point in game.food:
         if any([game.uf.connected(x, point) for x in validHeadMoves]): # food is reachable
+            if game.uf.getSize(point) < game.me.size and game.me.health > 25: # avoid areas smaller than us if not that hungry
+                continue
             path = game.aStar(point, firstMoveMood, structures.Mood.RISKY) 
             if path and len(path) <= game.me.health: # if len(path) is greater, we'll die before we get there
                 paths.append(path)
