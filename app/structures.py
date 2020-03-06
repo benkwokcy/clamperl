@@ -5,7 +5,7 @@ import random
 import time
 from collections import defaultdict
 from enum import Enum, auto
-from typing import List
+from typing import List, Dict
 
 
 class Direction(Enum):
@@ -135,7 +135,7 @@ class Game:
         self.width = data["board"]["width"]
         self.board = [[State.EMPTY] * self.width for _ in range(self.height)]
         self.me = Snake(data["you"])
-        self.enemies = [Snake(d) for d in data["board"]["snakes"]] 
+        self.enemies = [Snake(d) for d in data["board"]["snakes"] if d["name"] != self.me.name] 
         self.food = []
         self.uf = UnionFind(self.board) # connected areas
 
@@ -300,7 +300,7 @@ class Game:
         moves are risky.
         """
 
-        def getPath(parent: Point, dest: Point) -> List[Point]:
+        def getPath(parent: Dict[Point, Point], dest: Point) -> List[Point]:
             """Reconstruct path from a parent pointer array.
             Path returned does not include the source.
             """
