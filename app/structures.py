@@ -231,6 +231,7 @@ class Game:
         """
         originalBoard = [row[:] for row in self.board] # deep copy of board state
         numFutures = 3
+        movesUsed = defaultdict(set)
 
         # we will calculate numFutures futures and take the average
         for _ in range(numFutures):
@@ -241,16 +242,22 @@ class Game:
             self.setState(self.me.head, State.SELF_BODY)
             self.setState(move, State.SELF_HEAD)
 
+            moved = False
             for enemy in self.enemies:
                 if self.getState(enemy.tail) == State.ENEMY_TAIL:
                     self.board[enemy.tail.y][enemy.tail.x] = State.EMPTY            
                 self.setState(enemy.head, State.SELF_BODY)
-                possibleMoves = set(self.getMoves(enemy.head, Mood.RISKY))
+                possibleMoves = set(self.getMoves(enemy.head, Mood.RISKY)) - movesUsed[enemy]
                 if possibleMoves:
-                    enemyMove = possibleMoves.pop() # each enemy takes a random move
+                    moved = True
+                    enemyMove = possibleMoves.pop()
+                    movesUsed[enemy].add(enemyMove)
                     self.setState(enemyMove, State.ENEMY_HEAD)
                     for p in self.getMoves(enemyMove, Mood.SAFE):
                         self.setState(p, State.ENEMY_HEAD_AREA_STRONG if enemy.size > self.me.size else State.ENEMY_HEAD_AREA_EQUAL)
+
+            if not moved:
+                return 0
 
             # calculate area sizes
             safeSize = self.getAreaSize(move, Mood.SAFE)
