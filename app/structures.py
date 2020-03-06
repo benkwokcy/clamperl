@@ -31,6 +31,7 @@ class State(Enum):
     ENEMY_HEAD_AREA_WEAK = auto() # a point reachable by an enemy head who's length is less than ours
     ENEMY_HEAD_AREA_EQUAL = auto() # a point reachable by an enemy head who's length is equal to ours
     ENEMY_HEAD_AREA_STRONG = auto() # a point reachable by an enemy head who's length is greater than ours
+    ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL = auto() # a point reachable by multiple enemy heads who could kill us
     ENEMY_BODY = auto()
     ENEMY_TAIL = auto()
 
@@ -43,19 +44,20 @@ def getRisk(state: State) -> int:
         # SAFE
         State.FOOD: 0, # grab food if possible
         State.SELF_TAIL: 1,
-        State.ENEMY_HEAD_AREA_WEAK: 1, # head on collision will kill the other snake.
-        State.EMPTY: 2,
-        State.ENEMY_TAIL: 3,
+        State.ENEMY_HEAD_AREA_WEAK: 2, # head on collision will kill the other snake.
+        State.EMPTY: 3,
+        State.ENEMY_TAIL: 4,
 
         # POSSIBLE DEATH
-        State.ENEMY_HEAD_AREA_EQUAL: 4, # head on collision will kill both of us.
-        State.ENEMY_HEAD_AREA_STRONG: 5, # head on collision will kill our snake.
+        State.ENEMY_HEAD_AREA_EQUAL: 5, # head on collision will kill both of us.
+        State.ENEMY_HEAD_AREA_STRONG: 6, # head on collision will kill our snake.
+        State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL: 7,
 
         # DEFINITE DEATH
-        State.SELF_HEAD: 6,
-        State.SELF_BODY: 6,
-        State.ENEMY_HEAD: 6,
-        State.ENEMY_BODY: 6
+        State.SELF_HEAD: 8,
+        State.SELF_BODY: 8,
+        State.ENEMY_HEAD: 8,
+        State.ENEMY_BODY: 8
     }
 
     return risk[state]
@@ -67,9 +69,9 @@ class Mood(Enum):
     Anywhere you see mood as a parameter, you can modify it to make the snake act
     safer or riskier.
     """
-    SAFE = 3 # only moves with no chance of death
-    RISKY = 5 # include moves with some chance of death
-    ALL = 6 # include moves where we definitely die
+    SAFE = 4 # only moves with no chance of death
+    RISKY = 7 # include moves with some chance of death
+    ALL = 8 # include moves where we definitely die
 
 class Point:
     """A 2D point representing a position on the game board."""
@@ -173,7 +175,11 @@ class Game:
     def setState(self, point: Point, state: State):
         """Set a state at a point, if the risk is higher or the point is empty."""
         boardState = self.board[point.y][point.x]
-        if boardState == State.EMPTY or getRisk(state) > getRisk(boardState):
+        headAreaRisks = (getRisk(state.ENEMY_HEAD_AREA_EQUAL), getRisk(state.ENEMY_HEAD_AREA_STRONG))
+
+        if getRisk(state) in headAreaRisks and boardState in headAreaRisks:
+            self.board[point.y][point.x] = state.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL
+        elif boardState == State.EMPTY or getRisk(state) > getRisk(boardState):
             self.board[point.y][point.x] = state
 
     def setStates(self, points: List[State], state: State):
@@ -264,9 +270,9 @@ class Game:
             riskySize = self.getAreaSize(move, Mood.RISKY)
 
             if safeSize <= self.me.size:
-                return 1
+                return 4.5
             if riskySize <= self.me.size:
-                return 0.5
+                return 4.25
 
             # restore board state
             self.board = originalBoard
