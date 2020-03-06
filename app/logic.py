@@ -29,9 +29,9 @@ def getMove(data: dict) -> (structures.Direction, Mode):
             return (move, Mode.hungry if game.me.health < 50 else Mode.grow)
 
     # Take the safest move.
-    start_time = time.time() # RUNTIME LOGGING
+    # start_time = time.time() # RUNTIME LOGGING
     move = defend(game)
-    print("Defend took %f seconds" % (time.time() - start_time)) # RUNTIME LOGGING
+    # print("Defend took %f seconds" % (time.time() - start_time)) # RUNTIME LOGGING
     if move:
         return (move, Mode.defend)
 
