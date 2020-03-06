@@ -84,9 +84,10 @@ def defend(game: structures.Game) -> str:
 
     def _key(p: structures.Point) -> int:
         nonlocal game
-        currentRisk = structures.getRisk(game.getState(p))
-        futureRisk = game.simulateMove(p)
-        return (0.7 * currentRisk) + (0.3 * futureRisk)
+        risk = structures.getRisk(game.getState(p))
+        normalizedAreaSize = game.uf.getSize(p) / (game.height * game.width)
+        futureScore = game.simulateMove(p)
+        return risk - normalizedAreaSize + futureScore
 
     bestMove = min(moves, key=_key)
     bestMove = game.directionFromHead(bestMove)

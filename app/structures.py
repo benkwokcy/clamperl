@@ -230,14 +230,11 @@ class Game:
         safe moves.
         """
         originalBoard = [row[:] for row in self.board] # deep copy of board state
-        scores = 0.0
         numFutures = 3
-        movesUsed = defaultdict(set)
 
         # we will calculate numFutures futures and take the average
         for _ in range(numFutures):
 
-            # start_time = time.time() # RUNTIME LOGGING
             # set up future board state
             if self.getState(self.me.tail) == State.SELF_TAIL:
                 self.board[self.me.tail.y][self.me.tail.x] = State.EMPTY
@@ -248,35 +245,26 @@ class Game:
                 if self.getState(enemy.tail) == State.ENEMY_TAIL:
                     self.board[enemy.tail.y][enemy.tail.x] = State.EMPTY            
                 self.setState(enemy.head, State.SELF_BODY)
-                possibleMoves = set(self.getMoves(enemy.head, Mood.RISKY)) - movesUsed[enemy]
+                possibleMoves = set(self.getMoves(enemy.head, Mood.RISKY))
                 if possibleMoves:
-                    enemyMove = possibleMoves.pop()
-                    movesUsed[enemy].add(enemyMove)
+                    enemyMove = possibleMoves.pop() # each enemy takes a random move
                     self.setState(enemyMove, State.ENEMY_HEAD)
                     for p in self.getMoves(enemyMove, Mood.SAFE):
                         self.setState(p, State.ENEMY_HEAD_AREA_STRONG if enemy.size > self.me.size else State.ENEMY_HEAD_AREA_EQUAL)
-            # print("boardSetUp took %f seconds" % (time.time() - start_time)) # RUNTIME LOGGING
 
             # calculate area sizes
-            # start_time = time.time() # RUNTIME LOGGING
             safeSize = self.getAreaSize(move, Mood.SAFE)
             riskySize = self.getAreaSize(move, Mood.RISKY)
-            averageSize = ((0.7 * safeSize) + (0.3 * riskySize))
-            # print("areaSize took %f seconds" % (time.time() - start_time)) # RUNTIME LOGGING
 
-            if riskySize == 0:
-                scores += 6.0
-            elif safeSize == 0:
-                scores += 5.0
-            elif averageSize <= self.me.size:
-                scores += 4.0
-            else:
-                scores += self.me.size / averageSize * 4
+            if safeSize <= self.me.size:
+                return 1
+            if riskySize <= self.me.size:
+                return 0.5
 
             # restore board state
             self.board = originalBoard
 
-        return scores / numFutures
+        return 0
 
     def getAreaSize(self, p: Point, mood: Mood) -> int:
         """Area size not including the given point, 
