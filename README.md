@@ -54,18 +54,15 @@ git push heroku
 ## Issues
 
 - Snake is timing out
-  - It's definitely timing out. The service times on Heroku are wrong. See Postman times.
   - Timing out is coming from defend function. Eat is taking almost no time.
-
-- Snake is doing different things in arena than in my unit tests
-  - Reproduce bug by comparing unit tests against actual Postman calls
-  - Moves are not deterministic because of the random shuffling?
-  - simulateFuture function is overriding the current risk too much?
+    - Approximate instead of calculating
+    - Optimize algorithms
+    - Use multiprocessing to parallelize simulateFuture
+    - Get a better dyno/cloud machine
+    - Call C/C++ from Python
 
 ## To Do
-
 - Look further in the future.
-  - Use multiprocessing to parallelize
 - Generalize data structures so I can look up the best move for any snake, not just myself
 - Watch more games and add tests
   - Give descriptive names and comments to the test so I can reference them if they fail
