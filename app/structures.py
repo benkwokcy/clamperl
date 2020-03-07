@@ -130,16 +130,24 @@ class Game:
     """Contains the game board and all objects on the board.
     This is the main data structure for making decisions about the game.
     """
-    def __init__(self, data: dict):
+    def __init__(self, data: dict, snakeName: str):
         self.id = data.get("game", { "id": "0" })["id"]
         self.turn = data.get("turn", "0")
         self.height = data["board"]["height"]
         self.width = data["board"]["width"]
         self.board = [[State.EMPTY] * self.width for _ in range(self.height)]
-        self.me = Snake(data["you"])
-        self.enemies = [Snake(d) for d in data["board"]["snakes"] if d["name"] != self.me.name] 
+        self.me = None
+        self.enemies = []
         self.food = []
         self.uf = UnionFind(self.board) # connected areas
+
+        # snakes
+        for s in data["board"]["snakes"]:
+            s = Snake(s)
+            if snakeName in s.name: # TODO - better to use "==", check the rules for how my name appears
+                self.me = s
+            else:
+                self.enemies.append(s)
 
         # myself
         self.setState(self.me.head, State.SELF_HEAD)
