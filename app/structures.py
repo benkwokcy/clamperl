@@ -308,13 +308,15 @@ class Game:
                 return 0.0
 
             # calculate area sizes
-            safeAreaSize = len(self.floodFill(move, Mood.SAFE))
-            if safeAreaSize <= self.me.size:
-                return 4.5
-
-            riskyAreaSize = len(self.floodFill(move, Mood.RISKY))
-            if riskyAreaSize <= self.me.size:
-                return 4.25
+            safeArea = self.floodFill(move, Mood.SAFE)
+            # riskyArea = self.floodFill(move, Mood.RISKY)
+            if self.me.tail not in safeArea:
+                if len(safeArea) <= self.me.size:
+                    self.board = originalBoard
+                    return 4.5
+                # if len(riskyArea) <= self.me.size:
+                #     self.board = originalBoard
+                #     return 4.25
 
             # restore board state
             self.board = originalBoard
