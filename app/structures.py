@@ -5,7 +5,7 @@ import random
 import time
 from collections import defaultdict
 from enum import Enum, auto
-from typing import List, Dict
+from typing import List, Dict, Set
 
 
 class Direction(Enum):
@@ -173,12 +173,13 @@ class Game:
             self.setState(enemy.tail, State.ENEMY_BODY if enemy.ate else State.ENEMY_TAIL) # if just ate, the tail has a body part on top of it
 
         # calculate reachable areas
-        for row in range(self.height):
-            for col in range(self.width):
-                p = Point({"x": col, "y": row})
-                if getRisk(self.getState(p)) <= Mood.RISKY.value: 
-                    for neighbour in self.getMoves(p, Mood.RISKY):
-                        self.uf.union(p, neighbour)
+        validMoves = set(self.getMoves(self.me.head, Mood.RISKY))
+        while validMoves:
+            move = validMoves.pop()
+            points = self.floodFill(move, Mood.RISKY)
+            for p in points:
+                self.uf.union(p, move)
+            validMoves -= points
 
     def setState(self, point: Point, state: State):
         """Set a state at a point, if the risk is higher or the point is empty."""
@@ -235,7 +236,7 @@ class Game:
 
         return directions[point.tup].value
     
-    def simulateMove(self, move: Point) -> float:
+    def simulateMove(self, move: Point, numFutures: int) -> float:
         """Simulate one move into the future and return the estimated risk of that future state.
 
         We calculate multiple future states and take the average score.
@@ -244,7 +245,6 @@ class Game:
         safe moves.
         """
         originalBoard = [row[:] for row in self.board] # deep copy of board state
-        numFutures = 3
         movesUsed = defaultdict(set)
 
         # we will calculate numFutures futures and take the average
@@ -288,15 +288,14 @@ class Game:
         return 0
 
     def getAreaSize(self, p: Point, mood: Mood) -> int:
-        """Area size not including the given point, 
-        if we only take points obeying the given mood.
-        
-        Use this instead of UnionFind if you only care
-        about the size of a single connected area.
-        """
+        """Wrapper around floodFill to get the size of an area."""
+        return len(self.floodFill(p, mood))
+    
+    def floodFill(self, p: Point, mood: Mood) -> Set[Point]:
+        """Get all points reachable from p if we only take moves
+        obeying the mood."""
         seen = set([p])
         stack = [p]
-        size = 0
 
         while stack:
             curr = stack.pop()
@@ -304,9 +303,8 @@ class Game:
                 if neighbour not in seen:
                     seen.add(neighbour)
                     stack.append(neighbour)
-                    size += 1
 
-        return size
+        return seen        
 
     def aStar(self, dest: Point, firstMoveMood: Mood, pathMood: Mood) -> List[Point]:
         """A* Algorithm.
