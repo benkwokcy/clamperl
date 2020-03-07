@@ -59,7 +59,7 @@ def eat(game: structures.Game) -> str:
             return (None, -1.0) # if food is not reachable in our current mood, ignore this food.
         if game.ufRisky.getSize(point) < game.me.size and game.me.health > 25: 
             return (None, -1.0) # if we are not very hungry and the areas is smaller than us, ignore this food.
-        if any([point.distance(s.head) * 3 <= point.distance(game.me.head) for s in game.enemies]) and game.me.health > 10:
+        if any([point.distance(s.head) * 2 <= point.distance(game.me.head) for s in game.enemies]) and game.me.health > 10:
             return (None, -1.0) # if we are not starving and the food is 3x closer to another enemy, ignore this food.
 
         path = game.aStar(point, firstMoveMood, remainingMoveMood)
@@ -97,11 +97,13 @@ def defend(game: structures.Game) -> str:
 
     def _key(p: structures.Point, g: structures.Game) -> int:
         risk = structures.getRisk(g.getState(p))
-        normalizedAreaSize = g.ufRisky.getSize(p) / (g.height * g.width)
-        if g.ufSafe.connected(p, g.me.tail):
-            normalizedAreaSize = min(normalizedAreaSize, 1)
+        # if g.ufSafe.connected(p, g.me.tail):
+        #     normalizedAreaSize = 1
+        # else:
+        #     normalizedAreaSize = g.ufRisky.getSize(p) / (g.height * g.width)
         futureScore = g.simulateMove(p, 3)
-        return max(risk,futureScore) - normalizedAreaSize
+        return max(risk,futureScore)
+        # return max(risk,futureScore) - normalizedAreaSize
     
     # scores = POOL.map(_key, moves, [game] * len(moves)) # TODO - MultiProcessing
     scores = [_key(m, game) for m in moves] # TODO
