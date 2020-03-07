@@ -1,7 +1,7 @@
 """Implements the logic for the /move endpoint in server.py"""
 
 import heapq
-import time
+# import time
 from enum import Enum, auto
 from typing import List
 
@@ -99,7 +99,7 @@ def defend(game: structures.Game) -> str:
         risk = structures.getRisk(g.getState(p))
         normalizedAreaSize = g.ufRisky.getSize(p) / (g.height * g.width)
         if g.ufSafe.connected(p, g.me.tail):
-            normalizedAreaSize = min(normalizedAreaSize, 0.75)
+            normalizedAreaSize = min(normalizedAreaSize, 1)
         futureScore = g.simulateMove(p, 3)
         return max(risk,futureScore) - normalizedAreaSize
     
