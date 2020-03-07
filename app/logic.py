@@ -19,7 +19,6 @@ class Mode(Enum):
     random = auto()
 
 def getMove(data: dict, snakeName: str) -> (structures.Direction, Mode):
-
     """Parent function for deciding the next move."""
     game = structures.Game(data, snakeName)
 
@@ -99,6 +98,8 @@ def defend(game: structures.Game) -> str:
     def _key(p: structures.Point, g: structures.Game) -> int:
         risk = structures.getRisk(g.getState(p))
         normalizedAreaSize = g.uf.getSize(p) / (g.height * g.width)
+        if g.uf.connected(p, g.me.tail):
+            normalizedAreaSize = min(normalizedAreaSize, 0.5)
         futureScore = g.simulateMove(p, 3)
         return max(risk,futureScore) - normalizedAreaSize
     
