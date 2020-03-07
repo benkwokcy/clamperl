@@ -1,8 +1,0 @@
-import json
-import test
-
-from app import logic, structures
-
-mock = test.formatJson('{"Turn":108,"Food":[{"X":1,"Y":9}],"Snakes":[{"ID":"gs_6gKDf6SvGcBKFmKfFXcfxRKc","Name":"S-1000","URL":"","Body":[{"X":9,"Y":10},{"X":10,"Y":10},{"X":10,"Y":9},{"X":10,"Y":8},{"X":10,"Y":7},{"X":10,"Y":6},{"X":9,"Y":6}],"Health":96,"Death":{"Cause":"head-collision","Turn":91,"EliminatedBy":"gs_X7JpmcX3TGkbDW7yVY6qFVkb"},"Color":"#000000","HeadType":"shades","TailType":"round-bum","Latency":"17","Shout":"","Team":""},{"ID":"gs_qG3xxCXcyD8gV68SVfKMpFKb","Name":"huntail","URL":"","Body":[{"X":4,"Y":4},{"X":3,"Y":4},{"X":3,"Y":5},{"X":3,"Y":6},{"X":2,"Y":6},{"X":2,"Y":5},{"X":2,"Y":4},{"X":2,"Y":3},{"X":2,"Y":2},{"X":2,"Y":1},{"X":2,"Y":0}],"Health":96,"Death":null,"Color":"#d897cb","HeadType":"tongue","TailType":"round-bum","Latency":"89","Shout":"","Team":""},{"ID":"gs_X7JpmcX3TGkbDW7yVY6qFVkb","Name":"Dragonborn-2","URL":"","Body":[{"X":5,"Y":7},{"X":5,"Y":6},{"X":5,"Y":5},{"X":6,"Y":5},{"X":7,"Y":5},{"X":7,"Y":6},{"X":7,"Y":7},{"X":7,"Y":8},{"X":6,"Y":8},{"X":5,"Y":8},{"X":4,"Y":8},{"X":4,"Y":9},{"X":4,"Y":10},{"X":5,"Y":10},{"X":6,"Y":10},{"X":7,"Y":10},{"X":8,"Y":10},{"X":9,"Y":10}],"Health":98,"Death":null,"Color":"#050352","HeadType":"fang","TailType":"curled","Latency":"82","Shout":"","Team":""},{"ID":"gs_PFMT4kSJpqhDCkK976W6JdqB","Name":"D.Va","URL":"","Body":[{"X":3,"Y":4},{"X":4,"Y":4},{"X":4,"Y":3},{"X":3,"Y":3}],"Health":82,"Death":{"Cause":"head-collision","Turn":23,"EliminatedBy":"gs_X7JpmcX3TGkbDW7yVY6qFVkb"},"Color":"#EE4BB5","HeadType":"","TailType":"","Latency":"87","Shout":"","Team":""}]}')
-print(json.dumps(mock))
-print(logic.getMove(mock))
