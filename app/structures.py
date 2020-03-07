@@ -103,8 +103,8 @@ def getRisk(state: State) -> int:
     """
     risk = {
         # SAFE
-        State.FOOD: 0, # grab food if possible
-        State.SELF_TAIL: 1,
+        State.FOOD: 0,
+        State.SELF_TAIL: 0,
         State.ENEMY_HEAD_AREA_WEAK: 2, # head on collision will kill the other snake.
         State.EMPTY: 3,
         State.ENEMY_TAIL: 4,
@@ -270,9 +270,11 @@ class Game:
             for enemy in self.enemies:
                 possibleMoves = set(self.getMoves(enemy.head, Mood.RISKY)) - movesUsed[enemy]
                 if possibleMoves:
-                    moved = True
+                    # mark this move as explored
                     enemyMove = possibleMoves.pop()
                     movesUsed[enemy].add(enemyMove)
+                    moved = True
+                    # update board with enemy move
                     if not enemy.ate:
                         self.board[enemy.tail.y][enemy.tail.x] = State.EMPTY            
                     self.setState(enemy.head, State.SELF_BODY)
