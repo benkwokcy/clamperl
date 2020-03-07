@@ -73,7 +73,8 @@ class Direction(Enum):
 
 class State(Enum):
     """Each 1x1 square on the game board is given a state."""
-    EMPTY = auto()
+    EMPTY_SIDE = auto()
+    EMPTY_MIDDLE = auto()
     FOOD = auto()
     SELF_HEAD = auto()
     SELF_BODY = auto()
@@ -94,6 +95,13 @@ class State(Enum):
             return State.ENEMY_HEAD_AREA_EQUAL
         else:
             return State.ENEMY_HEAD_AREA_STRONG
+    
+    @staticmethod
+    def getSideOrMiddle(point: Point, length: int):
+        if point.x in (0, length-1) or point.y in (0, length-1):
+            return State.EMPTY_SIDE
+        else:
+            return State.EMPTY_MIDDLE
 
 def getRisk(state: State) -> int:
     """Assign a riskiness value to each state.
@@ -104,9 +112,10 @@ def getRisk(state: State) -> int:
         # SAFE
         State.FOOD: 0,
         State.SELF_TAIL: 0,
-        State.ENEMY_HEAD_AREA_WEAK: 2, # head on collision will kill the other snake.
-        State.EMPTY: 3,
-        State.ENEMY_TAIL: 4,
+        State.ENEMY_HEAD_AREA_WEAK: 1, # head on collision will kill the other snake.
+        State.EMPTY_MIDDLE: 2,
+        State.ENEMY_TAIL: 3,
+        State.EMPTY_SIDE: 4,
 
         # POSSIBLE DEATH
         State.ENEMY_HEAD_AREA_EQUAL: 5, # head on collision will kill both of us.
@@ -142,12 +151,22 @@ class Game:
         self.turn = data.get("turn", "0")
         self.height = data["board"]["height"]
         self.width = data["board"]["width"]
-        self.board = [[State.EMPTY] * self.width for _ in range(self.height)]
+        self.board = [[None] * self.width for _ in range(self.height)]
         self.me = None
         self.enemies = []
         self.food = []
         self.ufRisky = UnionFind(self.board) # connected areas
         self.ufSafe = UnionFind(self.board) # connected areas
+
+        # board
+        for row in range(self.height):
+            for col in range(self.width):
+                self.board[row][col] = State.getSideOrMiddle(Point({"x":col, "y":row}), self.height)
+
+        # food
+        for coordinates in data["board"]["food"]:
+            self.food.append(Point(coordinates))
+            self.setState(Point(coordinates), State.FOOD)
 
         # snakes
         for s in data["board"]["snakes"]:
@@ -161,11 +180,6 @@ class Game:
         self.setState(self.me.head, State.SELF_HEAD)
         self.setStates(self.me.middle, State.SELF_BODY)
         self.setState(self.me.tail, State.SELF_BODY if self.me.ate else State.SELF_TAIL, overrideRisk=True) # if just ate, the tail has a body part on top of it
-
-        # food
-        for coordinates in data["board"]["food"]:
-            self.food.append(Point(coordinates))
-            self.setState(Point(coordinates), State.FOOD)
 
         # enemies
         for enemy in self.enemies:
@@ -203,7 +217,7 @@ class Game:
 
         if getRisk(state) in headAreaRisks and boardState in headAreaRisks:
             self.board[point.y][point.x] = state.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL
-        elif boardState == State.EMPTY or getRisk(state) > getRisk(boardState):
+        elif boardState in (State.EMPTY_SIDE, State.EMPTY_MIDDLE) or getRisk(state) > getRisk(boardState):
             self.board[point.y][point.x] = state
 
     def setStates(self, points: List[State], state: State):
@@ -270,7 +284,7 @@ class Game:
 
             # set up future board state
             if self.getState(self.me.tail) == State.SELF_TAIL:
-                self.board[self.me.tail.y][self.me.tail.x] = State.EMPTY
+                self.board[self.me.tail.y][self.me.tail.x] = State.getSideOrMiddle(self.me.tail, self.height)
             self.setState(self.me.head, State.SELF_BODY)
             self.setState(move, State.SELF_HEAD)
 
@@ -284,7 +298,7 @@ class Game:
                     moved = True
                     # update board with enemy move
                     if not enemy.ate:
-                        self.board[enemy.tail.y][enemy.tail.x] = State.EMPTY            
+                        self.board[enemy.tail.y][enemy.tail.x] = State.getSideOrMiddle(enemy.tail, self.height)          
                     self.setState(enemy.head, State.SELF_BODY)
                     self.setState(enemyMove, State.ENEMY_HEAD)
                     for p in self.getMoves(enemyMove, Mood.SAFE):
