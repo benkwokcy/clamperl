@@ -55,9 +55,9 @@ def eat(game: structures.Game) -> str:
         remainingMoveMood = structures.Mood.SAFE if game.me.health > 25 else structures.Mood.RISKY
         validHeadMoves = game.getMoves(game.me.head, firstMoveMood)
         
-        if not any([game.uf.connected(x, point) for x in validHeadMoves]): 
+        if not any([game.ufRisky.connected(x, point) for x in validHeadMoves]): 
             return (None, -1.0) # if food is not reachable in our current mood, ignore this food.
-        if game.uf.getSize(point) < game.me.size and game.me.health > 25: 
+        if game.ufRisky.getSize(point) < game.me.size and game.me.health > 25: 
             return (None, -1.0) # if we are not very hungry and the areas is smaller than us, ignore this food.
         if any([point.distance(s.head) * 3 <= point.distance(game.me.head) for s in game.enemies]) and game.me.health > 10:
             return (None, -1.0) # if we are not starving and the food is 3x closer to another enemy, ignore this food.
@@ -70,7 +70,7 @@ def eat(game: structures.Game) -> str:
             return (None, -1.0) # if we'll die before we reach the food, ignore this food.
 
         dist = len(path) / game.height if len(path) / game.height <= 1 else 1 # clamp to 1
-        areaSize = game.uf.getSize(path[0]) / (game.height * game.width)
+        areaSize = game.ufRisky.getSize(path[0]) / (game.height * game.width)
         
         if game.me.health < 20:
             return (path[0], (0.4 * (1 - dist)) + (0.6 * areaSize)) # prioritize closer food if health is getting low
@@ -97,9 +97,9 @@ def defend(game: structures.Game) -> str:
 
     def _key(p: structures.Point, g: structures.Game) -> int:
         risk = structures.getRisk(g.getState(p))
-        normalizedAreaSize = g.uf.getSize(p) / (g.height * g.width)
-        if g.uf.connected(p, g.me.tail):
-            normalizedAreaSize = min(normalizedAreaSize, 0.5)
+        normalizedAreaSize = g.ufRisky.getSize(p) / (g.height * g.width)
+        if g.ufSafe.connected(p, g.me.tail):
+            normalizedAreaSize = min(normalizedAreaSize, 0.75)
         futureScore = g.simulateMove(p, 3)
         return max(risk,futureScore) - normalizedAreaSize
     

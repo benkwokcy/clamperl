@@ -147,7 +147,8 @@ class Game:
         self.me = None
         self.enemies = []
         self.food = []
-        self.uf = UnionFind(self.board) # connected areas
+        self.ufRisky = UnionFind(self.board) # connected areas
+        self.ufSafe = UnionFind(self.board) # connected areas
 
         # snakes
         for s in data["board"]["snakes"]:
@@ -181,7 +182,15 @@ class Game:
             move = validMoves.pop()
             points = self.floodFill(move, Mood.RISKY)
             for p in points:
-                self.uf.union(p, move)
+                self.ufRisky.union(p, move)
+            validMoves -= points
+
+        validMoves = set(self.getMoves(self.me.head, Mood.SAFE))
+        while validMoves:
+            move = validMoves.pop()
+            points = self.floodFill(move, Mood.SAFE)
+            for p in points:
+                self.ufSafe.union(p, move)
             validMoves -= points
 
     def setState(self, point: Point, state: State, overrideRisk = False):
