@@ -7,72 +7,6 @@ from collections import defaultdict
 from enum import Enum, auto
 from typing import List, Dict, Set
 
-
-class Direction(Enum):
-    """The /move endpoint expects a string of this form."""
-    UP = "up"
-    DOWN = "down"
-    LEFT = "left"
-    RIGHT = "right"
-
-    @staticmethod # suppresses no 'self' reference warning
-    def randomDirection():
-        """Use this if we're going to die no matter what."""
-        return random.choice([d.value for d in Direction])
-
-class State(Enum):
-    """Each 1x1 square on the game board is given a state."""
-    EMPTY = auto()
-    FOOD = auto()
-    SELF_HEAD = auto()
-    SELF_BODY = auto()
-    SELF_TAIL = auto()
-    ENEMY_HEAD = auto()
-    ENEMY_HEAD_AREA_WEAK = auto() # a point reachable by an enemy head who's length is less than ours
-    ENEMY_HEAD_AREA_EQUAL = auto() # a point reachable by an enemy head who's length is equal to ours
-    ENEMY_HEAD_AREA_STRONG = auto() # a point reachable by an enemy head who's length is greater than ours
-    ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL = auto() # a point reachable by multiple enemy heads who could kill us
-    ENEMY_BODY = auto()
-    ENEMY_TAIL = auto()
-
-def getRisk(state: State) -> int:
-    """Assign a riskiness value to each state.
-    The higher the value, the more dangerous the state is.
-    This allows me to compare moves and choose the safer options.
-    """
-    risk = {
-        # SAFE
-        State.FOOD: 0, # grab food if possible
-        State.SELF_TAIL: 1,
-        State.ENEMY_HEAD_AREA_WEAK: 2, # head on collision will kill the other snake.
-        State.EMPTY: 3,
-        State.ENEMY_TAIL: 4,
-
-        # POSSIBLE DEATH
-        State.ENEMY_HEAD_AREA_EQUAL: 5, # head on collision will kill both of us.
-        State.ENEMY_HEAD_AREA_STRONG: 6, # head on collision will kill our snake.
-        State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL: 7,
-
-        # DEFINITE DEATH
-        State.SELF_HEAD: 8,
-        State.SELF_BODY: 8,
-        State.ENEMY_HEAD: 8,
-        State.ENEMY_BODY: 8
-    }
-
-    return risk[state]
-
-class Mood(Enum):
-    """Assigns names to commonly used risk values.
-    This is used to set the maximum riskiness allowed by the getMoves() function.
-    When we do this, we can easily configure the behavior of the snake.
-    Anywhere you see mood as a parameter, you can modify it to make the snake act
-    safer or riskier.
-    """
-    SAFE = 4 # only moves with no chance of death
-    RISKY = 7 # include moves with some chance of death
-    ALL = 8 # include moves where we definitely die
-
 class Point:
     """A 2D point representing a position on the game board."""
     def __init__(self, data):
@@ -121,10 +55,84 @@ class Snake:
         self.name = data["name"]
         self.head = Point(body[0])
         self.tail = Point(body[-1])
-        self.middle = { Point(c) for c in body[1:-1] } # everything except the head and the tail
+        self.middle = { Point(c) for c in body[1:-1] }
         self.size = len(body)
         self.health = data["health"]
         self.ate = (self.size >= 2) and (body[-1] == body[-2]) # just ate food so there is a body part on top of the tail
+
+class Direction(Enum):
+    """The /move endpoint expects a string of this form."""
+    UP = "up"
+    DOWN = "down"
+    LEFT = "left"
+    RIGHT = "right"
+
+    @staticmethod # suppresses no 'self' reference warning
+    def randomDirection():
+        """Use this if we're going to die no matter what."""
+        return random.choice([d.value for d in Direction])
+
+class State(Enum):
+    """Each 1x1 square on the game board is given a state."""
+    EMPTY = auto()
+    FOOD = auto()
+    SELF_HEAD = auto()
+    SELF_BODY = auto()
+    SELF_TAIL = auto()
+    ENEMY_HEAD = auto()
+    ENEMY_HEAD_AREA_WEAK = auto() # a point reachable by an enemy head who's length is less than ours
+    ENEMY_HEAD_AREA_EQUAL = auto() # a point reachable by an enemy head who's length is equal to ours
+    ENEMY_HEAD_AREA_STRONG = auto() # a point reachable by an enemy head who's length is greater than ours
+    ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL = auto() # a point reachable by multiple enemy heads who could kill us
+    ENEMY_BODY = auto()
+    ENEMY_TAIL = auto()
+
+    @staticmethod
+    def getHeadState(me: Snake, enemy: Snake):
+        if me.size > enemy.size:
+            return State.ENEMY_HEAD_AREA_WEAK
+        elif me.size == enemy.size:
+            return State.ENEMY_HEAD_AREA_EQUAL
+        else:
+            return State.ENEMY_HEAD_AREA_STRONG
+
+def getRisk(state: State) -> int:
+    """Assign a riskiness value to each state.
+    The higher the value, the more dangerous the state is.
+    This allows me to compare moves and choose the safer options.
+    """
+    risk = {
+        # SAFE
+        State.FOOD: 0, # grab food if possible
+        State.SELF_TAIL: 1,
+        State.ENEMY_HEAD_AREA_WEAK: 2, # head on collision will kill the other snake.
+        State.EMPTY: 3,
+        State.ENEMY_TAIL: 4,
+
+        # POSSIBLE DEATH
+        State.ENEMY_HEAD_AREA_EQUAL: 5, # head on collision will kill both of us.
+        State.ENEMY_HEAD_AREA_STRONG: 6, # head on collision will kill our snake.
+        State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL: 7,
+
+        # DEFINITE DEATH
+        State.SELF_HEAD: 8,
+        State.SELF_BODY: 8,
+        State.ENEMY_HEAD: 8,
+        State.ENEMY_BODY: 8
+    }
+
+    return risk[state]
+
+class Mood(Enum):
+    """Assigns names to commonly used risk values.
+    This is used to set the maximum riskiness allowed by the getMoves() function.
+    When we do this, we can easily configure the behavior of the snake.
+    Anywhere you see mood as a parameter, you can modify it to make the snake act
+    safer or riskier.
+    """
+    SAFE = 4 # only moves with no chance of death
+    RISKY = 7 # include moves with some chance of death
+    ALL = 8 # include moves where we definitely die
 
 class Game:
     """Contains the game board and all objects on the board.
@@ -152,7 +160,7 @@ class Game:
         # myself
         self.setState(self.me.head, State.SELF_HEAD)
         self.setStates(self.me.middle, State.SELF_BODY)
-        self.setState(self.me.tail, State.SELF_BODY if self.me.ate else State.SELF_TAIL) # if just ate, the tail has a body part on top of it
+        self.setState(self.me.tail, State.SELF_BODY if self.me.ate else State.SELF_TAIL, overrideRisk=True) # if just ate, the tail has a body part on top of it
 
         # food
         for coordinates in data["board"]["food"]:
@@ -162,15 +170,10 @@ class Game:
         # enemies
         for enemy in self.enemies:
             for move in self.getMoves(enemy.head, Mood.RISKY):
-                if self.me.size > enemy.size:
-                    self.setState(move, State.ENEMY_HEAD_AREA_WEAK)
-                elif self.me.size == enemy.size:
-                    self.setState(move, State.ENEMY_HEAD_AREA_EQUAL)
-                else:
-                    self.setState(move, State.ENEMY_HEAD_AREA_STRONG)
+                self.setState(move, State.getHeadState(self.me, enemy))
             self.setState(enemy.head, State.ENEMY_HEAD)
             self.setStates(enemy.middle, State.ENEMY_BODY)
-            self.setState(enemy.tail, State.ENEMY_BODY if enemy.ate else State.ENEMY_TAIL) # if just ate, the tail has a body part on top of it
+            self.setState(enemy.tail, State.ENEMY_BODY if enemy.ate else State.ENEMY_TAIL, overrideRisk=True) # if just ate, the tail has a body part on top of it
 
         # calculate reachable areas
         validMoves = set(self.getMoves(self.me.head, Mood.RISKY))
@@ -181,8 +184,12 @@ class Game:
                 self.uf.union(p, move)
             validMoves -= points
 
-    def setState(self, point: Point, state: State):
+    def setState(self, point: Point, state: State, overrideRisk = False):
         """Set a state at a point, if the risk is higher or the point is empty."""
+        if overrideRisk:
+            self.board[point.y][point.x] = state
+            return
+
         boardState = self.board[point.y][point.x]
         headAreaRisks = (getRisk(state.ENEMY_HEAD_AREA_EQUAL), getRisk(state.ENEMY_HEAD_AREA_STRONG))
 
@@ -244,6 +251,9 @@ class Game:
         The score is based on the size of the area our snake ends up in. We prefer areas connected by
         safe moves.
         """
+        if numFutures == 0:
+            return 0.0
+
         originalBoard = [row[:] for row in self.board] # deep copy of board state
         movesUsed = defaultdict(set)
 
@@ -258,38 +268,34 @@ class Game:
 
             moved = False
             for enemy in self.enemies:
-                if self.getState(enemy.tail) == State.ENEMY_TAIL:
-                    self.board[enemy.tail.y][enemy.tail.x] = State.EMPTY            
-                self.setState(enemy.head, State.SELF_BODY)
                 possibleMoves = set(self.getMoves(enemy.head, Mood.RISKY)) - movesUsed[enemy]
                 if possibleMoves:
                     moved = True
                     enemyMove = possibleMoves.pop()
                     movesUsed[enemy].add(enemyMove)
+                    if not enemy.ate:
+                        self.board[enemy.tail.y][enemy.tail.x] = State.EMPTY            
+                    self.setState(enemy.head, State.SELF_BODY)
                     self.setState(enemyMove, State.ENEMY_HEAD)
                     for p in self.getMoves(enemyMove, Mood.SAFE):
-                        self.setState(p, State.ENEMY_HEAD_AREA_STRONG if enemy.size > self.me.size else State.ENEMY_HEAD_AREA_EQUAL)
+                        self.setState(p, State.getHeadState(self.me, enemy))
 
             if not moved:
-                return 0
+                return 0.0
 
             # calculate area sizes
-            safeSize = self.getAreaSize(move, Mood.SAFE)
-            riskySize = self.getAreaSize(move, Mood.RISKY)
-
-            if safeSize <= self.me.size:
+            safeAreaSize = len(self.floodFill(move, Mood.SAFE))
+            if safeAreaSize <= self.me.size:
                 return 4.5
-            if riskySize <= self.me.size:
+
+            riskyAreaSize = len(self.floodFill(move, Mood.RISKY))
+            if riskyAreaSize <= self.me.size:
                 return 4.25
 
             # restore board state
             self.board = originalBoard
 
-        return 0
-
-    def getAreaSize(self, p: Point, mood: Mood) -> int:
-        """Wrapper around floodFill to get the size of an area."""
-        return len(self.floodFill(p, mood))
+        return 0.0
     
     def floodFill(self, p: Point, mood: Mood) -> Set[Point]:
         """Get all points reachable from p if we only take moves
