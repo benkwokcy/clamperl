@@ -4,20 +4,19 @@ A snake AI for Battlesnake 2020.
 
 ## About
 
-Logic Overview:
+### Overview:
 
-- If the snake is hungry, it will eat. Otherwise, it moves around defensively.
+- If the snake is hungry or smaller than its opponents, it will eat. Otherwise, it moves around defensively.
   - If the snake is really hungry, it will take more risks to get food.
-  - If the snake isn't that hungry, it might act defensively until it's easier to reach food.
-- The snake likes to stay in a large open area.
+  - If the food is hard to reach and the snake isn't starving, it can postpone eating until a better time.
+- The snake likes to stay in a large open area, especially areas
 - The snake prefers safer moves over riskier moves.
 
-Structures Overview:
+### Features:
 
-- Game information is stored in the Game object.
-- Each square on the Game board has a State.
-- Each state has a number (the risk number) that tells us how dangerous it is.
-- These risk scores incentivize the snake to take certain moves/paths.
+- Heuristics:
+  - Size of connected areas. Size is found using UnionFind and DFS/Flood Fill.
+  - Risk score assigned to each square. Score scheme are manually adjusted to incentivize certain moves.
 
 ## File Structure
 
@@ -50,9 +49,3 @@ Deploying to Heroku:
 ```bash
 git push heroku
 ```
-
-## To Do
-
-- Look at more future possibilities and parallelize
-- Generalize data structures so I can look up the best move for any snake, not just myself
-- Watch more games and add tests
