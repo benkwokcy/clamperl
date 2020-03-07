@@ -54,10 +54,10 @@ def eat(game: structures.Game) -> str:
         # take riskier paths to the food if we're starving
         firstMoveMood = structures.Mood.SAFE if game.me.health > 10 else structures.Mood.RISKY 
         remainingMoveMood = structures.Mood.SAFE if game.me.health > 25 else structures.Mood.RISKY
-        validHeadMoves = game.getMoves(game.me.head, structures.Mood.RISKY)
+        validHeadMoves = game.getMoves(game.me.head, firstMoveMood)
         
         if not any([game.uf.connected(x, point) for x in validHeadMoves]): 
-            return (None, -1.0) # if food is not reachable, ignore this food.
+            return (None, -1.0) # if food is not reachable in our current mood, ignore this food.
         if game.uf.getSize(point) < game.me.size and game.me.health > 25: 
             return (None, -1.0) # if we are not very hungry and the areas is smaller than us, ignore this food.
         if any([point.distance(s.head) * 3 <= point.distance(game.me.head) for s in game.enemies]) and game.me.health > 10:
