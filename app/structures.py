@@ -114,7 +114,7 @@ def getRisk(state: State) -> int:
         # SAFE
         State.FOOD: 0,
         State.SELF_TAIL: 0,
-        State.ENEMY_HEAD_AREA_WEAK: 1, # head on collision will kill the other snake.
+        State.ENEMY_HEAD_AREA_WEAK: 2, # head on collision will kill the other snake.
         State.EMPTY_MIDDLE: 2,
         State.ENEMY_TAIL: 3,
         State.EMPTY_SIDE: 4,
