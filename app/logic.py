@@ -57,7 +57,7 @@ def eat(game: structures.Game) -> str:
         
         if not any([game.ufRisky.connected(x, point) for x in validHeadMoves]): 
             return (None, -1.0) # if food is not reachable in our current mood, ignore this food.
-        if game.ufRisky.getSize(point) < game.me.size and game.me.health > 25: 
+        if game.ufSafe.getSize(point) < game.me.size and game.me.health > 25: 
             return (None, -1.0) # if we are not very hungry and the areas is smaller than us, ignore this food.
         if any([point.distance(s.head) * 2 <= point.distance(game.me.head) for s in game.enemies]) and game.me.health > 10:
             return (None, -1.0) # if we are not starving and the food is 3x closer to another enemy, ignore this food.
@@ -67,7 +67,7 @@ def eat(game: structures.Game) -> str:
         path = game.aStar(point, firstMoveMood, remainingMoveMood)
         
         if not path:
-            return (None, -1.0) # if we cannot reach the food using our current mood, ignore this food..
+            return (None, -1.0) # if we cannot reach the food using our current mood, ignore this food.
         if len(path) > game.me.health:
             return (None, -1.0) # if we'll die before we reach the food, ignore this food.
 
@@ -86,10 +86,13 @@ def eat(game: structures.Game) -> str:
     if not pairs:
         return None
 
-    bestMove = max(pairs, key=lambda x: x[1])[0]
-    bestMove = game.directionFromHead(bestMove)
+    pairs.sort(key=lambda x:x[1], reverse=True)
+    for move,_ in pairs:
+        if game.me.health > 25 and game.simulateMove(move, numFutures=2) != 0.0:
+            continue
+        return game.directionFromHead(move)
 
-    return bestMove
+    return None
 
 def defend(game: structures.Game) -> str:
     """Go to the safest location."""
@@ -99,13 +102,8 @@ def defend(game: structures.Game) -> str:
 
     def _key(p: structures.Point, g: structures.Game) -> int:
         risk = structures.getRisk(g.getState(p))
-        # if g.ufSafe.connected(p, g.me.tail):
-        #     normalizedAreaSize = 1
-        # else:
-        #     normalizedAreaSize = g.ufRisky.getSize(p) / (g.height * g.width)
         futureScore = g.simulateMove(p, 3)
-        return max(risk,futureScore)
-        # return max(risk,futureScore) - normalizedAreaSize
+        return (max(risk,futureScore), 1 / min([e.head.distance(p) for e in g.enemies]))
     
     # scores = POOL.map(_key, moves, [game] * len(moves)) # TODO - MultiProcessing
     scores = [_key(m, game) for m in moves] # TODO
