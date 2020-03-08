@@ -4,7 +4,8 @@ import heapq
 import random
 from collections import defaultdict
 from enum import Enum, auto
-from typing import List, Dict, Set
+from typing import Dict, List, Set
+
 
 class Point:
     """A 2D point representing a position on the game board."""
@@ -54,7 +55,7 @@ class Snake:
         self.name = data["name"]
         self.head = Point(body[0])
         self.tail = Point(body[-1])
-        self.middle = { Point(c) for c in body[1:-1] }
+        self.middle = [ Point(c) for c in body[1:-1] ]
         self.size = len(body)
         self.health = data["health"]
         self.ate = (self.size >= 2) and (body[-1] == body[-2]) # just ate food so there is a body part on top of the tail
@@ -266,27 +267,33 @@ class Game:
         return directions[point.tup].value
     
     def simulateMove(self, move: Point, numFutures: int) -> float:
-        """Simulate one move into the future and return the estimated risk of that future state.
-
-        We calculate multiple future states and take the average score.
-        In each future, our snake takes the given move and the enemy snakes take a random move.
-        The score is based on the size of the area our snake ends up in. We prefer areas connected by
-        safe moves.
-        """
+        """Simulate one move into the future and see if it's risky.
+        Bad means we are not safely connected to our tail or the safe area is smaller
+        than us."""
         if numFutures == 0:
             return 0.0
-
-        originalBoard = [row[:] for row in self.board] # deep copy of board state
+        
         movesUsed = defaultdict(set)
+        originalBoard = [row[:] for row in self.board]
 
-        # we will calculate numFutures futures and take the average
+        # version of the board with all old head areas cleared
+        for row in range(self.height): 
+            for col in range(self.width):
+                if self.board[row][col] in (State.ENEMY_HEAD_AREA_WEAK, State.ENEMY_HEAD_AREA_EQUAL, State.ENEMY_HEAD_AREA_STRONG, State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL):
+                    self.board[row][col] = State.EMPTY_MIDDLE # doesn't matter if it's side because we only care about safe vs risky
+        noHeadAreaBoard = [row[:] for row in self.board] 
+
         for _ in range(numFutures):
 
             # set up future board state
-            if self.getState(self.me.tail) == State.SELF_TAIL:
-                self.board[self.me.tail.y][self.me.tail.x] = State.getSideOrMiddle(self.me.tail, self.height)
-            self.setState(self.me.head, State.SELF_BODY)
-            self.setState(move, State.SELF_HEAD)
+            if self.me.ate and self.getState(move) != State.FOOD:
+                self.setState(self.me.tail, State.SELF_TAIL, overrideRisk=True)
+            if not self.me.ate:
+                self.setState(self.me.tail, State.EMPTY_MIDDLE, overrideRisk=True)
+                if self.getState(move) != State.FOOD:
+                    self.setState(self.me.middle[-1], State.SELF_TAIL, overrideRisk=True)
+            self.setState(move, State.SELF_HEAD, overrideRisk=True)
+            self.setState(self.me.head, State.SELF_BODY, overrideRisk=True)
 
             moved = False
             for enemy in self.enemies:
@@ -297,30 +304,36 @@ class Game:
                     movesUsed[enemy].add(enemyMove)
                     moved = True
                     # update board with enemy move
+                    if enemy.ate and self.getState(enemyMove) != State.FOOD and self.getState(enemy.tail) == State.ENEMY_BODY:
+                        self.setState(enemy.tail, State.ENEMY_TAIL, overrideRisk=True)
                     if not enemy.ate:
-                        self.board[enemy.tail.y][enemy.tail.x] = State.getSideOrMiddle(enemy.tail, self.height)          
-                    self.setState(enemy.head, State.SELF_BODY)
-                    self.setState(enemyMove, State.ENEMY_HEAD)
-                    for p in self.getMoves(enemyMove, Mood.SAFE):
+                        if self.getState(enemy.tail) == State.ENEMY_TAIL:
+                            self.setState(enemy.tail, State.EMPTY_MIDDLE, overrideRisk=True)
+                        if self.getState(enemyMove) != State.FOOD:
+                            self.setState(enemy.middle[-1], State.ENEMY_TAIL, overrideRisk=True)        
+                    self.setState(enemy.head, State.ENEMY_BODY, overrideRisk=True)
+                    self.setState(enemyMove, State.ENEMY_HEAD, overrideRisk=True)
+                    for p in self.getMoves(enemyMove, Mood.RISKY):
                         self.setState(p, State.getHeadState(self.me, enemy))
 
             if not moved:
+                self.board = originalBoard
                 return 0.0
 
             # calculate area sizes
             safeArea = self.floodFill(move, Mood.SAFE)
-            # riskyArea = self.floodFill(move, Mood.RISKY)
             if self.me.tail not in safeArea:
+                if len(safeArea) == 1:
+                    self.board = originalBoard
+                    return 6
                 if len(safeArea) <= self.me.size:
                     self.board = originalBoard
                     return 4.5
-                # if len(riskyArea) <= self.me.size:
-                #     self.board = originalBoard
-                #     return 4.25
 
             # restore board state
-            self.board = originalBoard
+            self.board = [row[:] for row in noHeadAreaBoard]
 
+        self.board = originalBoard
         return 0.0
     
     def floodFill(self, p: Point, mood: Mood) -> Set[Point]:
@@ -401,6 +414,8 @@ class Game:
                 return "X"
             elif state == State.ENEMY_TAIL:
                 return "<"
+            elif state in (State.ENEMY_HEAD_AREA_WEAK, State.ENEMY_HEAD_AREA_EQUAL, State.ENEMY_HEAD_AREA_STRONG, State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL):
+                return "-"
             else:
                 return " "
 
