@@ -272,7 +272,7 @@ class Game:
     
     def simulateMove(self, move: Point, numFutures: int) -> float:
         """Simulate one move into the future and see if it's risky.
-        Bad means we are not safely connected to our tail or the safe area is smaller
+        Bad means we are not safely connected to our tail and the safe area is smaller
         than us."""
         if numFutures == 0:
             return 0.0
@@ -284,12 +284,12 @@ class Game:
         for row in range(self.height): 
             for col in range(self.width):
                 if self.board[row][col] in (State.ENEMY_HEAD_AREA_WEAK, State.ENEMY_HEAD_AREA_EQUAL, State.ENEMY_HEAD_AREA_STRONG, State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL):
-                    self.board[row][col] = State.EMPTY_MIDDLE # doesn't matter if it's side because we only care about safe vs risky
+                    self.board[row][col] = State.EMPTY_MIDDLE # doesn't matter if it is state.empty_side because we only care about safe vs risky
         noHeadAreaBoard = [row[:] for row in self.board] 
 
         for _ in range(numFutures):
 
-            # set up future board state
+            # move my snake one move
             if self.me.ate and self.getState(move) != State.FOOD:
                 self.setState(self.me.tail, State.SELF_TAIL, overrideRisk=True)
             if not self.me.ate:
@@ -299,6 +299,7 @@ class Game:
             self.setState(move, State.SELF_HEAD, overrideRisk=True)
             self.setState(self.me.head, State.SELF_BODY, overrideRisk=True)
 
+            # move enemies one move
             moved = False
             for enemy in self.enemies:
                 possibleMoves = set(self.getMoves(enemy.head, Mood.RISKY)) - movesUsed[enemy]
@@ -328,7 +329,10 @@ class Game:
             # calculate area sizes
             safeArea = self.floodFill(move, Mood.SAFE)
             if self.me.tail not in safeArea:
-                if len(safeArea) == 1:
+                if len(safeArea) <= self.me.size / 4:
+                    self.board = originalBoard
+                    return 7
+                if len(safeArea) <= self.me.size / 2:
                     self.board = originalBoard
                     return 6
                 if len(safeArea) <= self.me.size:
