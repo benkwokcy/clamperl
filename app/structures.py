@@ -192,6 +192,9 @@ class Game:
             self.setState(enemy.tail, State.ENEMY_BODY if enemy.ate else State.ENEMY_TAIL, overrideRisk=True) # if just ate, the tail has a body part on top of it
 
         # calculate reachable areas
+        # NOTE: this only unions safe/risky moves from my head's possible moves.
+        # It *DOES NOT* include any heads or bodies. Do not try to see if these are connected.
+        # Squares on either side of my head are not connected through my head.
         validMoves = set(self.getMoves(self.me.head, Mood.RISKY))
         while validMoves:
             move = validMoves.pop()
@@ -330,7 +333,7 @@ class Game:
                     return 6
                 if len(safeArea) <= self.me.size:
                     self.board = originalBoard
-                    return 4.5
+                    return 4.5 + ((1 - (len(safeArea) / self.me.size)) / 10)
 
             # restore board state
             self.board = [row[:] for row in noHeadAreaBoard]
