@@ -423,8 +423,8 @@ class Game:
                 return "X"
             elif state == State.ENEMY_TAIL:
                 return "<"
-            elif state in (State.ENEMY_HEAD_AREA_WEAK, State.ENEMY_HEAD_AREA_EQUAL, State.ENEMY_HEAD_AREA_STRONG, State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL):
-                return "-"
+            # elif state in (State.ENEMY_HEAD_AREA_WEAK, State.ENEMY_HEAD_AREA_EQUAL, State.ENEMY_HEAD_AREA_STRONG, State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL):
+            #     return "-"
             else:
                 return " "
 
