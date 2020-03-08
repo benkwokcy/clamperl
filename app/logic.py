@@ -18,9 +18,11 @@ class Mode(Enum):
     defend = auto()
     random = auto()
 
-def getMove(data: dict, snakeName: str) -> (structures.Direction, Mode):
+def getMove(data: dict, snakeID: str = None) -> (structures.Direction, Mode):
     """Parent function for deciding the next move."""
-    game = structures.Game(data, snakeName)
+    if not snakeID:
+        snakeID = data["you"]["id"]
+    game = structures.Game(data, snakeID)
 
     # Eat when food dips below threshold or our size is smaller than the average enemy
     smallerThanAverage = game.enemies and (game.me.size <= (sum([e.size for e in game.enemies]) / len(game.enemies)))

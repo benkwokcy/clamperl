@@ -52,6 +52,7 @@ class Point:
 class Snake:
     def __init__(self, data: dict):
         body = data["body"]
+        self.id = data["id"]
         self.name = data["name"]
         self.head = Point(body[0])
         self.tail = Point(body[-1])
@@ -147,7 +148,7 @@ class Game:
     """Contains the game board and all objects on the board.
     This is the main data structure for making decisions about the game.
     """
-    def __init__(self, data: dict, snakeName: str):
+    def __init__(self, data: dict, snakeID: str):
         self.id = data.get("game", { "id": "0" })["id"]
         self.turn = data.get("turn", "0")
         self.height = data["board"]["height"]
@@ -172,7 +173,7 @@ class Game:
         # snakes
         for s in data["board"]["snakes"]:
             s = Snake(s)
-            if snakeName in s.name: # TODO - better to use "==", check the rules for how my name appears
+            if snakeID == s.id:
                 self.me = s
             else:
                 self.enemies.append(s)

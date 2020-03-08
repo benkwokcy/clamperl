@@ -28,8 +28,7 @@ def move():
     """Updates your snake with the current state of the game board and asks for a move."""
     data = bottle.request.json
     # print(json.dumps(data)) # LOGGING
-    snakeName = "huntail"
-    direction,_ = getMove(data, snakeName)
+    direction,_ = getMove(data)
 
     return bottle.HTTPResponse(
         status = 200,
