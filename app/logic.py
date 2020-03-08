@@ -107,7 +107,7 @@ def defend(game: structures.Game) -> str:
     def _key(p: structures.Point, g: structures.Game) -> int:
         risk = structures.getRisk(g.getState(p))
         futureScore = g.simulateMove(p, 3)
-        return (max(risk,futureScore), 1 / min([e.head.distance(p) for e in g.enemies]))
+        return (max(risk,futureScore), 1 / min([e.head.distance(p) for e in g.enemies]), p.distance(g.me.tail))
     
     # scores = POOL.map(_key, moves, [game] * len(moves)) # TODO - MultiProcessing
     scores = [_key(m, game) for m in moves] # TODO
