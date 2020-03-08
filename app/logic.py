@@ -65,8 +65,8 @@ def eat(game: structures.Game) -> str:
             return (None, -1.0) # if we are not starving and the food is 3x closer to another enemy, ignore this food.
         if any([point.distance(s.head) == 2 and point.distance(game.me.head) == 2 and s.size >= game.me.size for s in game.enemies]):
             return (None, -1.0) # if a equal/bigger enemy is also 2 moves from food, ignore this food.
-        if game.me.size > 20 and game.me.health > 20 and not game.ufRisky.connected(point, game.me.tail):
-            return (None, -1.0) # if i'm big and not that hungry, prefer to stay by my tail
+        if game.me.size > 20 and game.me.health > 25 and not game.ufSafe.connected(point, game.me.tail):
+            return (None, -1.0) # if i'm getting very long and not that hungry, prefer to stay by my tail
 
         path = game.aStar(point, firstMoveMood, remainingMoveMood)
         
