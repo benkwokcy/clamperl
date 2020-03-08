@@ -112,7 +112,7 @@ def defend(game: structures.Game) -> str:
         currentRisk = structures.getRisk(g.getState(p))
         futureRisk = g.simulateMove(p, 3)
         finalRisk = max(currentRisk, futureRisk)
-        currentAreaSize = (g.height * g.width) / g.ufSafe.getSize(p)
+        currentAreaSize = (g.height * g.width) / (g.ufSafe.getSize(p) + sum([e.size for e in g.enemies if g.ufSafe.connected(e.tail, p)]))
         distToEnemies = 1 / min([e.head.distance(p) for e in g.enemies if any([g.ufRisky.connected(p, q) for q in g.getMoves(e.head, structures.Mood.RISKY)])] or [g.height + g.height])
         distToTail = p.distance(g.me.middle[-1]) if g.ufSafe.connected(p, g.me.tail) else g.height + g.height
         return (finalRisk, currentAreaSize, distToEnemies, distToTail)
