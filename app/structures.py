@@ -299,6 +299,7 @@ class Game:
             moved = False
             for enemy in self.enemies:
                 possibleMoves = set(self.getMoves(enemy.head, Mood.RISKY)) - movesUsed[enemy]
+                possibleMoves = { p for p in possibleMoves if self.getState(p) != State.SELF_TAIL }
                 if possibleMoves:
                     # mark this move as explored
                     enemyMove = possibleMoves.pop()
