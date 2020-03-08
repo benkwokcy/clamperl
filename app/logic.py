@@ -72,6 +72,8 @@ def eat(game: structures.Game) -> str:
             return (None, -1.0) # if we cannot reach the food using our current mood, ignore this food.
         if len(path) > game.me.health:
             return (None, -1.0) # if we'll die before we reach the food, ignore this food.
+        if len(path) > 15:
+            return (None, -1.0) # if it's too far, ignore this food.
 
         dist = len(path) / game.height if len(path) / game.height <= 1 else 1 # clamp to 1
         areaSize = game.ufRisky.getSize(path[0]) / (game.height * game.width)
