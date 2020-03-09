@@ -340,10 +340,8 @@ class Game:
                 return (0.0, isTailReachable, isEnemyTailReachable, riskyAreaSize)
 
             safeArea = self.floodFill(move, Mood.SAFE)
-            riskyArea = self.floodFill(move, Mood.RISKY)
             if not any([t in safeArea for t in enemyTails]):
                 isEnemyTailReachable = False
-            riskyAreaSize = len(riskyArea)
             if myTail not in safeArea:
                 isTailReachable = False
                 if len(safeArea) <= self.me.size:
