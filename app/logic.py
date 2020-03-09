@@ -50,55 +50,53 @@ def eat(game: structures.Game) -> str:
         return None
 
     def eatWorker(point: structures.Point, game: structures.Game) -> (structures.Point, float):
-        """Given a food location, decide if we should try to eat it and give a score based on its
-        distance and safety."""
+        """Given a food location, decide if we should try to eat it and return the path if we should."""
         # take riskier paths to the food if we're starving
         firstMoveMood = structures.Mood.SAFE if game.me.health > 10 else structures.Mood.RISKY 
         remainingMoveMood = structures.Mood.SAFE if game.me.health > 25 else structures.Mood.RISKY
         validHeadMoves = game.getMoves(game.me.head, firstMoveMood)
 
         if point.distance(game.me.head) > game.height:
-            return (None, -1.0) # if it's too far, ignore this food.
+            return None # if it's too far, ignore this food.
         if not any([game.ufRisky.connected(x, point) for x in validHeadMoves]): 
-            return (None, -1.0) # if food is not reachable in our current mood, ignore this food.
+            return None # if food is not reachable even by risky moves, ignore this food.
         if game.ufSafe.getSize(point) < game.me.size and game.me.health > 25: 
-            return (None, -1.0) # if we are not very hungry and the areas is smaller than us, ignore this food.
+            return None # if we are not very hungry and the areas is smaller than us, ignore this food.
         if any([point.distance(s.head) * 2 <= point.distance(game.me.head) for s in game.enemies]) and game.me.health > 10:
-            return (None, -1.0) # if we are not starving and the food is 3x closer to another enemy, ignore this food.
+            return None # if we are not starving and the food is 3x closer to another enemy, ignore this food.
         if any([point.distance(s.head) == 2 and point.distance(game.me.head) == 2 and s.size >= game.me.size for s in game.enemies]):
-            return (None, -1.0) # if a equal/bigger enemy is also 2 moves from food, ignore this food.
-        if game.me.size > 20 and game.me.health > 25 and not game.ufSafe.connected(point, game.me.tail):
-            return (None, -1.0) # if i'm getting very long and not that hungry, prefer to stay by my tail
+            return None # if a equal/bigger enemy is also 2 moves from food, ignore this food.
+        if game.me.size > 13 and game.me.health > 25 and not game.ufSafe.connected(point, game.me.tail):
+            return None # if i'm getting very long and not that hungry, prefer to stay by my tail
 
         path = game.aStar(point, firstMoveMood, remainingMoveMood)
         
         if not path:
-            return (None, -1.0) # if we cannot reach the food using our current mood, ignore this food.
+            return None # if we cannot reach the food using our current mood, ignore this food.
         if len(path) > game.me.health:
-            return (None, -1.0) # if we'll die before we reach the food, ignore this food.
+            return None # if we'll die before we reach the food, ignore this food.
         if len(path) > game.height:
-            return (None, -1.0) # if it's too far, ignore this food.
+            return None # if it's too far, ignore this food.
 
-        dist = len(path) / game.height if len(path) / game.height <= 1 else 1 # clamp to 1
-        areaSize = game.ufRisky.getSize(path[0]) / (game.height * game.width)
-        
-        if game.me.health < 20:
-            return (path[0], (0.4 * (1 - dist)) + (0.6 * areaSize)) # prioritize closer food if health is getting low
-        else:
-            return (path[0], (0.3 * (1 - dist)) + (0.7 * areaSize)) # otherwise, care more about area size
+        return path
 
-    # pairs = POOL.map(eatWorker, game.food, [game] * len(game.food)) # TODO - MultiProcessing
-    pairs = [eatWorker(f, game) for f in game.food] # TODO
-    pairs = [p for p in pairs if p[0]]
-
-    if not pairs:
+    moves = []
+    for f in game.food:
+        path = eatWorker(f, game)
+        if path:
+            heapq.heappush(moves, (len(path), path[0]))
+    
+    if not moves:
         return None
 
-    pairs.sort(key=lambda x:x[1], reverse=True)
-    for move,_ in pairs:
-        if game.me.health > 25 and game.simulateMove(move, numFutures=2) != 0.0:
+    while moves:
+        _, move = heapq.heappop(moves)
+        futureRisk, isTailConnected, isEnemyTailConnected, _ = game.simulateMove(move, 1)
+        if game.me.health > 20 and not (futureRisk < structures.Mood.SAFE.value or isTailConnected or isEnemyTailConnected):
             continue
         return game.directionFromHead(move)
+     
+    # pairs = POOL.map(eatWorker, game.food, [game] * len(game.food)) # TODO - MultiProcessing
 
     return None
 
@@ -108,18 +106,17 @@ def defend(game: structures.Game) -> str:
     if not moves:
         return None
 
-    def _key(p: structures.Point, g: structures.Game) -> int:
+    def _key(p: structures.Point, g: structures.Game):
         currentRisk = structures.getRisk(g.getState(p))
-        futureRisk = g.simulateMove(p, 3)
+        futureRisk, isTailConnected, isEnemyTailConnected, areaSize = g.simulateMove(p, 3)
         finalRisk = max(currentRisk, futureRisk)
-        currentAreaSize = (g.height * g.width) / (g.ufSafe.getSize(p) + sum([e.size for e in g.enemies if g.ufSafe.connected(e.tail, p)]))
-        distToEnemies = 1 / min([e.head.distance(p) for e in g.enemies if any([g.ufRisky.connected(p, q) for q in g.getMoves(e.head, structures.Mood.RISKY)])] or [g.height + g.height])
-        distToTail = p.distance(g.me.middle[-1]) if g.ufSafe.connected(p, g.me.tail) else g.height + g.height
-        return (finalRisk, currentAreaSize, distToEnemies, distToTail)
+        
+        # HACK - Reverse boolean values because we want the min key value
+        return (finalRisk, not isTailConnected, not isEnemyTailConnected, -areaSize)
     
     # scores = POOL.map(_key, moves, [game] * len(moves)) # TODO - MultiProcessing
-    scores = [_key(m, game) for m in moves] # TODO
-    bestMove = moves[scores.index(min(scores))]
+    bestMoves = [(_key(m, game), m) for m in moves]
+    bestMove = min(bestMoves)[1]
     bestMove = game.directionFromHead(bestMove)
 
     return bestMove

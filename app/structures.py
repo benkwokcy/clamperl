@@ -114,9 +114,9 @@ def getRisk(state: State) -> int:
         # SAFE
         State.FOOD: 0,
         State.SELF_TAIL: 0,
-        State.ENEMY_HEAD_AREA_WEAK: 2, # head on collision will kill the other snake.
         State.EMPTY_MIDDLE: 2,
         State.ENEMY_TAIL: 3,
+        State.ENEMY_HEAD_AREA_WEAK: 3, # head on collision will kill the other snake.
         State.EMPTY_SIDE: 4,
 
         # POSSIBLE DEATH
@@ -270,7 +270,7 @@ class Game:
 
         return directions[point.tup].value
     
-    def simulateMove(self, move: Point, numFutures: int) -> float:
+    def simulateMove(self, move: Point, numFutures: int) -> (float, bool):
         """Simulate one move into the future and see if it's risky.
         Bad means we are not safely connected to our tail and the safe area is smaller
         than us."""
@@ -287,26 +287,35 @@ class Game:
                     self.board[row][col] = State.EMPTY_MIDDLE # doesn't matter if it is state.empty_side because we only care about safe vs risky
         noHeadAreaBoard = [row[:] for row in self.board] 
 
+        isTailReachable = True
+        isEnemyTailReachable = True
+        riskyAreaSize = self.ufRisky.getSize(move)
+
         for _ in range(numFutures):
 
             # move my snake one move
+            myTail = self.me.tail
             if self.me.ate and self.getState(move) != State.FOOD:
                 self.setState(self.me.tail, State.SELF_TAIL, overrideRisk=True)
             if not self.me.ate:
                 self.setState(self.me.tail, State.EMPTY_MIDDLE, overrideRisk=True)
                 if self.getState(move) != State.FOOD:
                     self.setState(self.me.middle[-1], State.SELF_TAIL, overrideRisk=True)
+                    myTail = self.me.middle[-1]
             self.setState(move, State.SELF_HEAD, overrideRisk=True)
             self.setState(self.me.head, State.SELF_BODY, overrideRisk=True)
 
             # move enemies one move
             moved = False
+            enemyTails = set()
             for enemy in self.enemies:
+                enemyTail = enemy.tail
                 possibleMoves = set(self.getMoves(enemy.head, Mood.RISKY)) - movesUsed[enemy]
                 possibleMoves = { p for p in possibleMoves if self.getState(p) != State.SELF_TAIL }
                 if possibleMoves:
                     # mark this move as explored
-                    enemyMove = possibleMoves.pop()
+                    enemyMove = min(possibleMoves, key=lambda p: p.distance(move))
+                    possibleMoves.remove(enemyMove)
                     movesUsed[enemy].add(enemyMove)
                     moved = True
                     # update board with enemy move
@@ -316,34 +325,41 @@ class Game:
                         if self.getState(enemy.tail) == State.ENEMY_TAIL:
                             self.setState(enemy.tail, State.EMPTY_MIDDLE, overrideRisk=True)
                         if self.getState(enemyMove) != State.FOOD:
-                            self.setState(enemy.middle[-1], State.ENEMY_TAIL, overrideRisk=True)        
+                            self.setState(enemy.middle[-1], State.ENEMY_TAIL, overrideRisk=True)
+                            enemyTail = enemy.middle[-1]      
                     self.setState(enemy.head, State.ENEMY_BODY, overrideRisk=True)
                     self.setState(enemyMove, State.ENEMY_HEAD, overrideRisk=True)
                     for p in self.getMoves(enemyMove, Mood.RISKY):
                         self.setState(p, State.getHeadState(self.me, enemy))
+                enemyTails.add(enemyTail)
 
             if not moved:
                 self.board = originalBoard
-                return 0.0
+                isTailReachable = self.ufSafe.connected(move, self.me.tail)
+                isEnemyTailReachable = any([self.ufSafe.connected(move, e.head) for e in self.enemies])
+                return (0.0, isTailReachable, isEnemyTailReachable, riskyAreaSize)
 
-            # calculate area sizes
             safeArea = self.floodFill(move, Mood.SAFE)
-            if self.me.tail not in safeArea:
-                if len(safeArea) <= self.me.size / 4:
-                    self.board = originalBoard
-                    return 7
-                if len(safeArea) <= self.me.size / 2:
-                    self.board = originalBoard
-                    return 6
+            riskyArea = self.floodFill(move, Mood.RISKY)
+            if not any([t in safeArea for t in enemyTails]):
+                isEnemyTailReachable = False
+            riskyAreaSize = len(riskyArea)
+            if myTail not in safeArea:
+                isTailReachable = False
                 if len(safeArea) <= self.me.size:
                     self.board = originalBoard
-                    return 4.5 + ((1 - (len(safeArea) / self.me.size)) / 10)
+                    if len(safeArea) <= self.me.size / 4:
+                        return (7, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+                    elif len(safeArea) <= self.me.size / 2:
+                        return (6, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+                    else:
+                        return (4.5, isTailReachable, isEnemyTailReachable, riskyAreaSize)
 
             # restore board state
             self.board = [row[:] for row in noHeadAreaBoard]
 
         self.board = originalBoard
-        return 0.0
+        return (0, isTailReachable, isEnemyTailReachable, riskyAreaSize)
     
     def floodFill(self, p: Point, mood: Mood) -> Set[Point]:
         """Get all points reachable from p if we only take moves
