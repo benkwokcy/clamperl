@@ -4,24 +4,16 @@ A snake AI for Battlesnake 2020.
 
 ## About
 
-### Overview:
+This snake has a passive playstyle. It will eat just enough to keep up in size with other snakes, otherwise it will usually chase its tail. It tries to avoid other snakes but will act more boldly if it is starving. 
 
-- If the snake is hungry or smaller than its opponents, it will eat. Otherwise, it moves around defensively.
-  - If the snake is really hungry, it will take more risks to get food.
-  - If the food is hard to reach and the snake isn't starving, it can postpone eating until a better time.
-- The snake likes to stay in a large open area, especially areas
-- The snake prefers safer moves over riskier moves.
+The snake is optimized to run on one thread in a Heroku hobby dyno. It relies on heuristics rather than by enumerating future states. It only explicitly computes states that are one move into the future. As a result, it's been very easy to adjust the snake's tactics by tweaking the weighting of its heuristics. With this approach, the snake is peaking at rank 25 (out of 160) on the arena and there are still plenty of improvements to make. That said, I'm noticing more and more losses which could be solved with more future sight. I've made some primitive attempts at parallization but the overhead of my implementation actually made performance worse. This is worth looking into when there's time.
 
-### Features:
-
-- Heuristics:
-  - Size of connected areas. Size is found using UnionFind and DFS/Flood Fill.
-  - Risk score assigned to each square. Score scheme are manually adjusted to incentivize certain moves.
+My main workflow is to watch arena games where the snake loses, find the board state where it went wrong, think about what move I would have made, turn that board state into a test case, and tweak the heuristics until it passes. If you want to change the snake's strategy and tests start failing, feel free to change the tests. They don't check if the snake is broken, they just make sure it adheres to the strategy I have in mind.
 
 ## File Structure
 
 - server.py - launch web server
-- tests.py - run unit tests
+- tests.py - run tests
 - /app
   - logic.py - higher level logic configuring how my snake behaves
   - structures.py - data structures simulating the game state
