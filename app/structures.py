@@ -25,6 +25,9 @@ class Point:
 
     def down(self):
         return Point({"x": self.x, "y": self.y+1})
+    
+    def neighbours(self):
+        return [self.left(), self.right(), self.up(), self.down()]
 
     def distance(self, other) -> int:
         """Manhattan distance between this point and another point."""
@@ -82,6 +85,7 @@ class State(Enum):
     SELF_BODY = auto()
     SELF_TAIL = auto()
     ENEMY_HEAD = auto()
+    ENEMY_HEAD_AREA_WEAK_AND_STUCK = auto() # a point where a weaker enemy is forced to go to
     ENEMY_HEAD_AREA_WEAK = auto() # a point reachable by an enemy head who's length is less than ours
     ENEMY_HEAD_AREA_EQUAL = auto() # a point reachable by an enemy head who's length is equal to ours
     ENEMY_HEAD_AREA_STRONG = auto() # a point reachable by an enemy head who's length is greater than ours
@@ -114,9 +118,10 @@ def getRisk(state: State) -> int:
         # SAFE
         State.FOOD: 0,
         State.SELF_TAIL: 0,
+        State.ENEMY_HEAD_AREA_WEAK_AND_STUCK: 1,
         State.EMPTY_MIDDLE: 2,
+        State.ENEMY_HEAD_AREA_WEAK: 2, # head on collision will kill the other snake.
         State.ENEMY_TAIL: 3,
-        State.ENEMY_HEAD_AREA_WEAK: 3, # head on collision will kill the other snake.
         State.EMPTY_SIDE: 4,
 
         # POSSIBLE DEATH
@@ -185,8 +190,12 @@ class Game:
 
         # enemies
         for enemy in self.enemies:
-            for move in self.getMoves(enemy.head, Mood.RISKY):
-                self.setState(move, State.getHeadState(self.me, enemy))
+            enemyMoves = self.getMoves(enemy.head, Mood.RISKY)
+            if len(enemyMoves) == 1 and enemy.size < self.me.size:
+                self.setState(enemyMoves[0], State.ENEMY_HEAD_AREA_WEAK_AND_STUCK)
+            else:
+                for move in enemyMoves:
+                    self.setState(move, State.getHeadState(self.me, enemy))
             self.setState(enemy.head, State.ENEMY_HEAD)
             self.setStates(enemy.middle, State.ENEMY_BODY)
             self.setState(enemy.tail, State.ENEMY_BODY if enemy.ate else State.ENEMY_TAIL, overrideRisk=True) # if just ate, the tail has a body part on top of it
@@ -211,19 +220,22 @@ class Game:
                 self.ufSafe.union(p, move)
             validMoves -= points
 
-    def setState(self, point: Point, state: State, overrideRisk = False):
+    def setState(self, point: Point, newState: State, overrideRisk = False):
         """Set a state at a point, if the risk is higher or the point is empty."""
         if overrideRisk:
-            self.board[point.y][point.x] = state
+            self.board[point.y][point.x] = newState
             return
 
-        boardState = self.board[point.y][point.x]
-        headAreaRisks = (getRisk(state.ENEMY_HEAD_AREA_EQUAL), getRisk(state.ENEMY_HEAD_AREA_STRONG))
+        oldState = self.getState(point)
+        riskyHeadStates = (State.ENEMY_HEAD_AREA_EQUAL, State.ENEMY_HEAD_AREA_STRONG)
+        weakHeadStates = (State.ENEMY_HEAD_AREA_WEAK_AND_STUCK, State.ENEMY_HEAD_AREA_WEAK)
 
-        if getRisk(state) in headAreaRisks and boardState in headAreaRisks:
-            self.board[point.y][point.x] = state.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL
-        elif boardState in (State.EMPTY_SIDE, State.EMPTY_MIDDLE) or getRisk(state) > getRisk(boardState):
-            self.board[point.y][point.x] = state
+        if newState in riskyHeadStates and oldState in riskyHeadStates:
+            self.board[point.y][point.x] = State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL
+        elif (newState, oldState) == weakHeadStates or (oldState, newState) == weakHeadStates:
+            self.board[point.y][point.x] = State.ENEMY_HEAD_AREA_WEAK_AND_STUCK
+        elif oldState in (State.EMPTY_SIDE, State.EMPTY_MIDDLE) or getRisk(newState) > getRisk(oldState):
+            self.board[point.y][point.x] = newState
 
     def setStates(self, points: List[State], state: State):
         """Same as setState but takes a list of points."""
@@ -241,15 +253,8 @@ class Game:
             """Check if a point is within the game board boundaries."""
             return 0 <= point.x < self.width and 0 <= point.y < self.height
 
-        moves = [ 
-            Point({"x": point.x, "y": point.y-1}), 
-            Point({"x": point.x, "y": point.y+1}), 
-            Point({"x": point.x-1, "y": point.y}), 
-            Point({"x": point.x+1, "y": point.y})
-        ]
-
         # All moves that are inside the board and have risk <= mood
-        moves = [m for m in moves if isValid(m) and getRisk(self.getState(m)) <= mood.value]
+        moves = [m for m in point.neighbours() if isValid(m) and getRisk(self.getState(m)) <= mood.value]
 
         # If we don't shuffle, snake moves in predictable patterns when heuristics are tied for all moves
         random.shuffle(moves)
@@ -274,100 +279,155 @@ class Game:
         """Simulate one move into the future and see if it's risky.
         Bad means we are not safely connected to our tail and the safe area is smaller
         than us."""
+
+        def moveSnake(p: Point, snake: Snake, isSelf: bool) -> Point:
+            # moves snake one move on board
+            states = {
+                "tail": State.SELF_TAIL if isSelf else State.ENEMY_TAIL,
+                "body": State.SELF_BODY if isSelf else State.ENEMY_BODY,
+                "head": State.SELF_HEAD if isSelf else State.ENEMY_HEAD,
+            }
+            tail = snake.tail
+
+            if snake.ate and self.getState(p) != State.FOOD:
+                self.setState(snake.tail, states["tail"], overrideRisk=True)
+            if not snake.ate:
+                self.setState(snake.tail, State.EMPTY_MIDDLE, overrideRisk=True)
+                if self.getState(p) != State.FOOD:
+                    self.setState(snake.middle[-1], states["tail"], overrideRisk=True)
+                    tail = snake.middle[-1]
+            self.setState(p, states["head"], overrideRisk=True)
+            self.setState(snake.head, states["body"], overrideRisk=True)
+            if not isSelf:
+                for m in self.getMoves(p, Mood.RISKY):
+                    self.setState(m, State.getHeadState(self.me, snake))
+
+            return tail
+
+        def removeSnake(snake: Snake):
+            for p in [snake.head, snake.tail] + snake.middle:
+                self.setState(p, State.getSideOrMiddle(p, self.height), overrideRisk=True)
+
         if numFutures == 0:
             return 0.0
         
-        movesUsed = defaultdict(set)
+        # we need to restore the original board before we return
         originalBoard = [row[:] for row in self.board]
 
-        # version of the board with all old head areas cleared
+        # reset head areas and move my snake
         for row in range(self.height): 
             for col in range(self.width):
                 if self.board[row][col] in (State.ENEMY_HEAD_AREA_WEAK, State.ENEMY_HEAD_AREA_EQUAL, State.ENEMY_HEAD_AREA_STRONG, State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL):
                     self.board[row][col] = State.EMPTY_MIDDLE # doesn't matter if it is state.empty_side because we only care about safe vs risky
-        noHeadAreaBoard = [row[:] for row in self.board] 
+        myTail = moveSnake(move, self.me, True)
 
+        # print(f"Future: {self.directionFromHead(move)} INITIAL SETUP") # TODO
+        # print(self)
+
+        # metrics for the safety of this future
         isTailReachable = True
         isEnemyTailReachable = True
         riskyAreaSize = self.ufRisky.getSize(move)
 
-        for _ in range(numFutures):
+        # pre-calculation for enemy moves
+        movesRemaining = {}
+        movesPerEnemy = {}
+        aliveEnemies = set()
+        totalMovesUnexplored = 0
+        for e in self.enemies:
+            moves = { p for p in self.getMoves(e.head, Mood.RISKY) if self.getState(p) != State.SELF_TAIL }
+            if not moves: # enemies who will die for sure get removed from the board
+                removeSnake(e)
+            else:
+                aliveEnemies.add(e)
+                movesRemaining[e] = moves
+                movesPerEnemy[e] = set(moves) # shallow copy
+                totalMovesUnexplored += len(moves)
 
-            # move my snake one move
-            myTail = self.me.tail
-            if self.me.ate and self.getState(move) != State.FOOD:
-                self.setState(self.me.tail, State.SELF_TAIL, overrideRisk=True)
-            if not self.me.ate:
-                self.setState(self.me.tail, State.EMPTY_MIDDLE, overrideRisk=True)
-                if self.getState(move) != State.FOOD:
-                    self.setState(self.me.middle[-1], State.SELF_TAIL, overrideRisk=True)
-                    myTail = self.me.middle[-1]
-            self.setState(move, State.SELF_HEAD, overrideRisk=True)
-            self.setState(self.me.head, State.SELF_BODY, overrideRisk=True)
+        # save board state so we can return to it after each iteration
+        newBoard = [row[:] for row in self.board] 
 
-            # move enemies one move
-            moved = False
-            enemyTails = set()
-            for enemy in self.enemies:
-                enemyTail = enemy.tail
-                possibleMoves = set(self.getMoves(enemy.head, Mood.RISKY)) - movesUsed[enemy]
-                possibleMoves = { p for p in possibleMoves if self.getState(p) != State.SELF_TAIL }
-                if possibleMoves:
-                    # mark this move as explored
-                    enemyMove = min(possibleMoves, key=lambda p: p.distance(move))
-                    possibleMoves.remove(enemyMove)
-                    movesUsed[enemy].add(enemyMove)
-                    moved = True
-                    # update board with enemy move
-                    if enemy.ate and self.getState(enemyMove) != State.FOOD and self.getState(enemy.tail) == State.ENEMY_BODY:
-                        self.setState(enemy.tail, State.ENEMY_TAIL, overrideRisk=True)
-                    if not enemy.ate:
-                        if self.getState(enemy.tail) == State.ENEMY_TAIL:
-                            self.setState(enemy.tail, State.EMPTY_MIDDLE, overrideRisk=True)
-                        if self.getState(enemyMove) != State.FOOD:
-                            self.setState(enemy.middle[-1], State.ENEMY_TAIL, overrideRisk=True)
-                            enemyTail = enemy.middle[-1]      
-                    self.setState(enemy.head, State.ENEMY_BODY, overrideRisk=True)
-                    self.setState(enemyMove, State.ENEMY_HEAD, overrideRisk=True)
-                    for p in self.getMoves(enemyMove, Mood.RISKY):
-                        self.setState(p, State.getHeadState(self.me, enemy))
-                enemyTails.add(enemyTail)
+        for iteration in range(numFutures):
 
-            if not moved:
+            # keep track of whose head is where
+            heads = {}
+            
+            # we've looked at all enemy moves (but not all permutations) and none are super bad, so return
+            if totalMovesUnexplored == 0 and iteration != 0:
                 self.board = originalBoard
-                isTailReachable = self.ufSafe.connected(move, self.me.tail)
-                isEnemyTailReachable = any([self.ufSafe.connected(move, e.head) for e in self.enemies])
                 return (0.0, isTailReachable, isEnemyTailReachable, riskyAreaSize)
 
-            safeArea = self.floodFill(move, Mood.SAFE)
+            # move all enemies who aren't stuck
+            enemyTails = set()
+            for enemy in aliveEnemies:
+                # select the move
+                if movesRemaining[enemy]:
+                    if enemy.head.distance(self.me.head) <= 4:
+                        if enemy.size >= self.me.size:
+                            enemyMove = min(movesRemaining[enemy], key=lambda p: p.distance(move))
+                        else:
+                            enemyMove = max(movesRemaining[enemy], key=lambda p: p.distance(move))
+                        movesRemaining[enemy].remove(enemyMove)
+                        totalMovesUnexplored -= 1
+                    else:
+                        enemyMove = movesRemaining[enemy].pop()
+                        totalMovesUnexplored -= 1
+                elif movesPerEnemy[enemy]:
+                    enemyMove = random.choice(tuple(movesPerEnemy[enemy]))
+                else: # no possible moves
+                    removeSnake(enemy)
+                    continue
+
+                # update the board with the move
+                if self.getState(enemyMove) == State.ENEMY_HEAD:
+                    other = heads[enemyMove]
+                    if other.size >= enemy.size:
+                        removeSnake(enemy)
+                    else:
+                        removeSnake(other)
+                else:
+                    enemyTail = moveSnake(enemyMove, enemy, False)
+                    heads[enemyMove] = enemy
+                    enemyTails.add(enemyTail)
+
+            # calculate metrics
+            safeArea = self.floodFill(move, Mood.SAFE, futureSight=True)
+
             if not any([t in safeArea for t in enemyTails]):
                 isEnemyTailReachable = False
             if myTail not in safeArea:
                 isTailReachable = False
-                if len(safeArea) <= self.me.size:
-                    self.board = originalBoard
-                    if len(safeArea) <= self.me.size / 4:
-                        return (7, isTailReachable, isEnemyTailReachable, riskyAreaSize)
-                    elif len(safeArea) <= self.me.size / 2:
-                        return (6, isTailReachable, isEnemyTailReachable, riskyAreaSize)
-                    else:
-                        return (4.5, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+
+            # print(f"Future: {self.directionFromHead(move)}, safeArea={len(safeArea)}, meSize={self.me.size}, isTailReachable={isTailReachable}, isEnemyTailReachable={isEnemyTailReachable}") # TODO
+            # print(self)
+
+            if not isTailReachable and len(safeArea) <= self.me.size:
+                self.board = originalBoard
+                if len(safeArea) <= self.me.size / 4:
+                    return (7, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+                elif len(safeArea) <= self.me.size / 2:
+                    return (6, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+                else:
+                    return (4.5, isTailReachable, isEnemyTailReachable, riskyAreaSize)
 
             # restore board state
-            self.board = [row[:] for row in noHeadAreaBoard]
+            self.board = [row[:] for row in newBoard]
 
         self.board = originalBoard
         return (0, isTailReachable, isEnemyTailReachable, riskyAreaSize)
     
-    def floodFill(self, p: Point, mood: Mood) -> Set[Point]:
+    def floodFill(self, p: Point, mood: Mood, futureSight=False) -> Set[Point]:
         """Get all points reachable from p if we only take moves
-        obeying the mood."""
+        obeying the mood. Future means we count weak head areas
+        that form choke points as risky."""
         seen = set([p])
         stack = [p]
 
         while stack:
             curr = stack.pop()
             for neighbour in self.getMoves(curr, mood):
+                if futureSight and self.getState(neighbour) == State.ENEMY_HEAD_AREA_WEAK and neighbour.distance(p) > 1 and any([getRisk(self.getState(s)) > Mood.RISKY.value for s in self.getMoves(neighbour, Mood.ALL)]):
+                    continue
                 if neighbour not in seen:
                     seen.add(neighbour)
                     stack.append(neighbour)
@@ -432,20 +492,27 @@ class Game:
             elif state == State.SELF_TAIL:
                 return ">"
             elif state == State.ENEMY_HEAD:
-                return "@"
+                return "#"
             elif state == State.ENEMY_BODY:
                 return "X"
             elif state == State.ENEMY_TAIL:
                 return "<"
-            # elif state in (State.ENEMY_HEAD_AREA_WEAK, State.ENEMY_HEAD_AREA_EQUAL, State.ENEMY_HEAD_AREA_STRONG, State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL):
-            #     return "-"
+            elif state in (State.ENEMY_HEAD_AREA_EQUAL, State.ENEMY_HEAD_AREA_STRONG, State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL):
+                return "-"
+            elif state == State.ENEMY_HEAD_AREA_WEAK:
+                return "_"
             else:
                 return " "
 
+        assert self.height < 36, "Indices don't go that high in string representation, please extend indices."
+        indices = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
+
         result = ["\n"]
-        for row in self.board:
-            result.append("[" + "|".join([symbol(state) for state in row]) + "]")
+        result.append("   " + " ".join(indices[:self.height]))
+        for i, row in enumerate(self.board):
+            result.append(indices[i] + " [" + "|".join([symbol(state) for state in row]) + "]")
         result.append(f"Health: {self.me.health}")
+        result.append(f"Size: {self.me.size}")
 
         return "\n".join(result)
 
