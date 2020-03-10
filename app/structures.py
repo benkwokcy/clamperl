@@ -400,12 +400,14 @@ class Game:
 
             if not isTailReachable and len(safeArea) <= self.me.size:
                 self.board = originalBoard
-                if len(safeArea) <= self.me.size / 4:
-                    return (7, isTailReachable, isEnemyTailReachable, riskyAreaSize)
-                elif len(safeArea) <= self.me.size / 2:
-                    return (6, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+                if not isEnemyTailReachable:
+                    if len(safeArea) <= self.me.size / 2:
+                        return (7, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+                    elif len(safeArea) <= self.me.size:
+                        return (6, isTailReachable, isEnemyTailReachable, riskyAreaSize)
                 else:
-                    return (4.5, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+                    if len(safeArea) <= self.me.size:
+                        return (4.5, isTailReachable, isEnemyTailReachable, riskyAreaSize)
 
             # restore board state
             self.board = [row[:] for row in newBoard]
@@ -456,17 +458,7 @@ class Game:
         return food
 
     def aStar(self, dest: Point, firstMoveMood: Mood, pathMood: Mood) -> List[Point]:
-        """A* Algorithm.
-        Figures out the shortest path to a destination from the head.
-        Heuristic is the "manhattan" distance to the destination point.
-        
-        Takes two moods.
-        firstMoveMood = maximum risk level allowed for the first move from the head.
-        pathMood = maximum risk level allowed for remaining moves in the path.
-
-        For example, we find paths where the first move is safe and the rest of the
-        moves are risky.
-        """
+        """Figures out the shortest path to a destination from the head."""
 
         def getPath(parent: Dict[Point, Point], dest: Point) -> List[Point]:
             """Reconstruct path from a parent pointer array.
