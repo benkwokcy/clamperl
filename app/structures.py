@@ -436,7 +436,7 @@ class Game:
         startingMoves = self.getMoves(self.me.head, firstMoveMood)
 
         if not startingMoves:
-            return None
+            return []
         
         seen = set(startingMoves)
         queue = deque([(s,1,s) for s in startingMoves])
