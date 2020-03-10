@@ -1,15 +1,11 @@
 """Implements the logic for the /move endpoint in server.py"""
 
 import heapq
-# import time
 from enum import Enum, auto
 from typing import List
 
-# from pathos.multiprocessing import ProcessingPool  # TODO - MultiProcessing
-
 from app import structures
 
-# POOL = ProcessingPool(3) # TODO - MultiProcessing
 
 class Mode(Enum):
     """These values are used in test.py to see if the snake is doing what I expect."""
@@ -27,16 +23,12 @@ def getMove(data: dict, snakeID: str = None) -> (structures.Direction, Mode):
     # Eat when food dips below threshold or our size is smaller than the average enemy
     smallerThanAverage = game.enemies and (game.me.size <= (sum([e.size for e in game.enemies]) / len(game.enemies)))
     if game.me.health < 50 or smallerThanAverage:
-        # start_time = time.time() # RUNTIME LOGGING
         move = eat(game)
-        # print("Eat took %f seconds" % (time.time() - start_time)) # RUNTIME LOGGING
         if move:
             return (move, Mode.hungry if game.me.health < 50 else Mode.grow)
 
     # Take the safest move.
-    # start_time = time.time() # RUNTIME LOGGING
     move = defend(game)
-    # print("Defend took %f seconds" % (time.time() - start_time)) # RUNTIME LOGGING
     if move:
         return (move, Mode.defend)
 
@@ -95,8 +87,6 @@ def eat(game: structures.Game) -> str:
         if game.me.health > 20 and not (futureRisk < structures.Mood.SAFE.value or isTailConnected or isEnemyTailConnected):
             continue
         return game.directionFromHead(move)
-     
-    # pairs = POOL.map(eatWorker, game.food, [game] * len(game.food)) # TODO - MultiProcessing
 
     return None
 
@@ -114,7 +104,6 @@ def defend(game: structures.Game) -> str:
         # HACK - Reverse boolean values because we want the min key value
         return (finalRisk, not isTailConnected, not isEnemyTailConnected, -areaSize)
     
-    # scores = POOL.map(_key, moves, [game] * len(moves)) # TODO - MultiProcessing
     bestMoves = [(_key(m, game), m) for m in moves]
     bestMove = min(bestMoves)[1]
     bestMove = game.directionFromHead(bestMove)
