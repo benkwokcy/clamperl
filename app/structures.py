@@ -27,7 +27,7 @@ class Point:
         return Point({"x": self.x, "y": self.y+1})
     
     def neighbours(self):
-        return [self.left(), self.right(), self.up(), self.down()]
+        return {self.left(), self.right(), self.up(), self.down()}
 
     def distance(self, other) -> int:
         """Manhattan distance between this point and another point."""
@@ -117,7 +117,7 @@ def getRisk(state: State) -> int:
     risk = {
         # SAFE
         State.FOOD: 0,
-        State.SELF_TAIL: 0,
+        State.SELF_TAIL: 2,
         State.ENEMY_HEAD_AREA_WEAK_AND_STUCK: 1,
         State.EMPTY_MIDDLE: 2,
         State.ENEMY_HEAD_AREA_WEAK: 2, # head on collision will kill the other snake.
@@ -403,11 +403,10 @@ class Game:
                 if not isEnemyTailReachable:
                     if len(safeArea) <= self.me.size / 2:
                         return (7, isTailReachable, isEnemyTailReachable, riskyAreaSize)
-                    elif len(safeArea) <= self.me.size:
+                    else:
                         return (6, isTailReachable, isEnemyTailReachable, riskyAreaSize)
                 else:
-                    if len(safeArea) <= self.me.size:
-                        return (4.5, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+                    return (4.5, isTailReachable, isEnemyTailReachable, riskyAreaSize)
 
             # restore board state
             self.board = [row[:] for row in newBoard]
@@ -457,40 +456,41 @@ class Game:
 
         return food
 
-    def aStar(self, dest: Point, firstMoveMood: Mood, pathMood: Mood) -> List[Point]:
-        """Figures out the shortest path to a destination from the head."""
+    # def aStar(self, source: Point, dest: Point, pathMood: Mood, targetPathLength: int) -> List[Point]:
+    #     """Figures out the shortest path to a destination."""
 
-        def getPath(parent: Dict[Point, Point], dest: Point) -> List[Point]:
-            """Reconstruct path from a parent pointer array.
-            Path returned does not include the source.
-            """
-            path = []
+    #     # def getPath(parent: Dict[Point, Point], dest: Point) -> List[Point]:
+    #     #     """Reconstruct path from a parent pointer array.
+    #     #     Path returned does not include the source.
+    #     #     """
+    #     #     path = []
 
-            p = dest
-            while parent[p] != self.me.head:
-                path.append(p)
-                p = parent[p]
+    #     #     p = dest
+    #     #     while parent[p] != source:
+    #     #         path.append(p)
+    #     #         p = parent[p]
 
-            path.append(p)
+    #     #     path.append(p)
 
-            return path[::-1]
+    #     #     return path[::-1]
 
-        head = self.me.head
-        heap = [(dest.distance(head), head)]
-        pathCost = {head.tup: 0} # path cost so far from destination
-        parent = {head: head} # the point preceding another point in the path
+    #     heap = [(dest.distance(source), source)]
+    #     pathCost = {source.tup: 0} # path cost so far from destination
+    #     parent = {source: source} # the point preceding another point in the path
 
-        while heap:
-            _, move = heapq.heappop(heap)
-            if move == dest:
-                return getPath(parent, dest) # path found
-            for neighbour in self.getMoves(move, firstMoveMood if move == head else pathMood):
-                if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
-                    parent[neighbour] = move
-                    pathCost[neighbour.tup] = pathCost[move.tup] + 1
-                    heapq.heappush(heap, (pathCost[neighbour.tup] + dest.distance(neighbour), neighbour))
+    #     while heap:
+    #         _, move = heapq.heappop(heap)
+    #         if move == dest and pathCost[move.tup] == targetPathLength:
+    #             return True # path found
+    #         if pathCost[move.tup] + move.distance(dest) > maxPathLength:
+    #             continue
+    #         for neighbour in self.getMoves(move, pathMood):
+    #             if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
+    #                 parent[neighbour] = move
+    #                 pathCost[neighbour.tup] = pathCost[move.tup] + 1
+    #                 heapq.heappush(heap, (pathCost[neighbour.tup] + dest.distance(neighbour), neighbour))
 
-        return None # no path to destination
+    #     return False # no path to destination
 
     def __str__(self) -> str:
         """Overrides the print representation."""

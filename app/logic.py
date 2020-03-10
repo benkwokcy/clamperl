@@ -80,8 +80,22 @@ def defend(game: structures.Game) -> str:
     if not moves:
         return None
 
+    def tailChaseBuster(p, g):
+        if g.getState(p) == structures.State.SELF_TAIL and g.me.size > 5:
+            twoMovesAway = g.me.middle[-1]
+            # threeMovesAway = g.me.middle[-2]
+            for e in g.enemies:
+                if e.size > g.me.size and e.head.distance(g.me.head) <= 6:
+                    if e.head.distance(twoMovesAway) == 2 and set(g.getMoves(e.head, structures.Mood.RISKY)).intersection(twoMovesAway.neighbours()):
+                        return True
+                    # if e.head.distance(threeMovesAway) == 3 and any([g.ufRisky.connected(threeMovesAway, m) for m in g.getMoves(e.head, structures.Mood.RISKY)]):
+                    #     return True
+
     def _key(p: structures.Point, g: structures.Game):
-        currentRisk = structures.getRisk(g.getState(p))
+        if tailChaseBuster(p,g):
+            currentRisk = 4.5
+        else:
+            currentRisk = structures.getRisk(g.getState(p))
         futureRisk, isTailConnected, isEnemyTailConnected, areaSize = g.simulateMove(p, 3)
         finalRisk = max(currentRisk, futureRisk)
         
