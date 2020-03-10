@@ -2,7 +2,7 @@
 
 import heapq
 import random
-from collections import defaultdict
+from collections import defaultdict, deque
 from enum import Enum, auto
 from typing import Dict, List, Set
 
@@ -162,8 +162,8 @@ class Game:
         self.me = None
         self.enemies = []
         self.food = []
-        self.ufRisky = UnionFind(self.board) # connected areas
         self.ufSafe = UnionFind(self.board) # connected areas
+        self.ufRisky = UnionFind(self.board) # connected areas
 
         # board
         for row in range(self.height):
@@ -204,21 +204,21 @@ class Game:
         # NOTE: this only unions safe/risky moves from my head's possible moves.
         # It *DOES NOT* include any heads or bodies. Do not try to see if these are connected.
         # Squares on either side of my head are not connected through my head.
-        validMoves = set(self.getMoves(self.me.head, Mood.RISKY))
-        while validMoves:
-            move = validMoves.pop()
-            points = self.floodFill(move, Mood.RISKY)
-            for p in points:
-                self.ufRisky.union(p, move)
-            validMoves -= points
 
-        validMoves = set(self.getMoves(self.me.head, Mood.SAFE))
-        while validMoves:
-            move = validMoves.pop()
-            points = self.floodFill(move, Mood.SAFE)
-            for p in points:
-                self.ufSafe.union(p, move)
-            validMoves -= points
+        validMoves = self.getMoves(self.me.head, Mood.SAFE)
+        validMoves.append(self.me.tail)
+        for move in validMoves:
+            if self.ufSafe.getSize(move) == 1:
+                points = self.floodFill(move, Mood.SAFE, self.me.size+2)
+                for p in points:
+                    self.ufSafe.union(p, move)
+
+        validMoves = self.getMoves(self.me.head, Mood.RISKY)
+        for move in validMoves:
+            if self.ufRisky.getSize(move) == 1:
+                points = self.floodFill(move, Mood.RISKY, self.me.size+2)
+                for p in points:
+                    self.ufRisky.union(p, move)
 
     def setState(self, point: Point, newState: State, overrideRisk = False):
         """Set a state at a point, if the risk is higher or the point is empty."""
@@ -275,7 +275,7 @@ class Game:
 
         return directions[point.tup].value
     
-    def simulateMove(self, move: Point, numFutures: int) -> (float, bool):
+    def simulateMove(self, move: Point, numFutures: int):
         """Simulate one move into the future and see if it's risky.
         Bad means we are not safely connected to our tail and the safe area is smaller
         than us."""
@@ -307,9 +307,6 @@ class Game:
         def removeSnake(snake: Snake):
             for p in [snake.head, snake.tail] + snake.middle:
                 self.setState(p, State.getSideOrMiddle(p, self.height), overrideRisk=True)
-
-        if numFutures == 0:
-            return 0.0
         
         # we need to restore the original board before we return
         originalBoard = [row[:] for row in self.board]
@@ -391,7 +388,7 @@ class Game:
                     enemyTails.add(enemyTail)
 
             # calculate metrics
-            safeArea = self.floodFill(move, Mood.SAFE, futureSight=True)
+            safeArea = self.floodFill(move, Mood.SAFE, maxPathLength = self.me.size + 1)
 
             if not any([t in safeArea for t in enemyTails]):
                 isEnemyTailReachable = False
@@ -416,23 +413,47 @@ class Game:
         self.board = originalBoard
         return (0, isTailReachable, isEnemyTailReachable, riskyAreaSize)
     
-    def floodFill(self, p: Point, mood: Mood, futureSight=False) -> Set[Point]:
-        """Get all points reachable from p if we only take moves
-        obeying the mood. Future means we count weak head areas
-        that form choke points as risky."""
+    def floodFill(self, p: Point, mood: Mood, maxPathLength=float("inf")) -> Set[Point]:
+        """We count weak head areas that form choke points as risky."""
         seen = set([p])
-        stack = [p]
+        queue = deque([(p,1)])
 
-        while stack:
-            curr = stack.pop()
-            for neighbour in self.getMoves(curr, mood):
-                if futureSight and self.getState(neighbour) == State.ENEMY_HEAD_AREA_WEAK and neighbour.distance(p) > 1 and any([getRisk(self.getState(s)) > Mood.RISKY.value for s in self.getMoves(neighbour, Mood.ALL)]):
-                    continue
-                if neighbour not in seen:
-                    seen.add(neighbour)
-                    stack.append(neighbour)
+        while queue:
+            curr,dist = queue.popleft()
+            if dist < maxPathLength:
+                for neighbour in self.getMoves(curr, mood):
+                    if mood == Mood.SAFE and self.getState(neighbour) == State.ENEMY_HEAD_AREA_WEAK and dist > 1 and any([getRisk(self.getState(s)) > Mood.RISKY.value for s in self.getMoves(neighbour, Mood.ALL)]):
+                        continue
+                    if neighbour not in seen:
+                        seen.add(neighbour)
+                        queue.append((neighbour, dist+1))
 
-        return seen        
+        return seen
+
+    def foodPerimeter(self, firstMoveMood: Mood, pathMood: Mood, maxPathLength: int):
+        """Get food reachable from the head within a certain path length and mood constraint."""
+        startingMoves = self.getMoves(self.me.head, firstMoveMood)
+
+        if not startingMoves:
+            return None
+        
+        seen = set(startingMoves)
+        queue = deque([(s,1,s) for s in startingMoves])
+        food = []
+
+        while queue:
+            curr, dist, parent = queue.popleft()
+            if self.getState(curr) == State.FOOD:
+                food.append((curr,dist,parent))
+            if dist < maxPathLength:
+                for neighbour in self.getMoves(curr, pathMood):
+                    if pathMood == Mood.SAFE and self.getState(neighbour) == State.ENEMY_HEAD_AREA_WEAK and neighbour.distance(self.me.head) > 1 and any([getRisk(self.getState(s)) > Mood.RISKY.value for s in self.getMoves(neighbour, Mood.ALL)]):
+                        continue
+                    if neighbour not in seen:
+                        seen.add(neighbour)
+                        queue.append((neighbour, dist+1, parent))
+
+        return food
 
     def aStar(self, dest: Point, firstMoveMood: Mood, pathMood: Mood) -> List[Point]:
         """A* Algorithm.
