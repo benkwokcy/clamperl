@@ -64,11 +64,11 @@ def eat(game: structures.Game) -> str:
 
     while moves:
         _, move = heapq.heappop(moves)
-        futureRisk, isTailConnected, isEnemyTailConnected, _ = game.simulateMove(move, 1)
+        futureRisk, isTailConnected, isEnemyTailConnected, areaSize = game.simulateMove(move, 1)
         moveString = game.directionFromHead(move)
         if game.me.size > 13 and game.me.health > 25 and not isTailConnected:
             continue
-        if game.me.health > 20 and not (futureRisk <= structures.Mood.SAFE.value or isTailConnected or isEnemyTailConnected):
+        if game.me.health > 20 and not (futureRisk <= structures.Mood.SAFE.value or isTailConnected or (areaSize >= game.me.size and isEnemyTailConnected)):
             continue
         return moveString
 
@@ -112,10 +112,9 @@ def defend(game: structures.Game) -> str:
         futureRisk, isTailConnected, isEnemyTailConnected, areaSize = g.simulateMove(p, 3)
         finalRisk = max(currentRisk, futureRisk)
         
-        # HACK - Reverse boolean values because we want the min key value
-        return (finalRisk, not isTailConnected, not isEnemyTailConnected, -areaSize, not g.getState(p) == structures.State.ENEMY_HEAD_AREA_WEAK_AND_STUCK)
+        return (-finalRisk, isTailConnected, areaSize, isEnemyTailConnected, g.getState(p) == structures.State.ENEMY_HEAD_AREA_WEAK_AND_STUCK)
     
     bestMoves = [(_key(m, game), game.directionFromHead(m)) for m in moves]
-    bestMove = min(bestMoves)[1]
+    bestMove = max(bestMoves)[1]
 
     return bestMove

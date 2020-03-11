@@ -101,7 +101,7 @@ class TestGetMove(unittest.TestCase):
     def test_defend_right_5(self):
         mock = formatJson("""{"Turn":96,"Food":[{"X":10,"Y":8}],"Snakes":[{"ID":"gs_F3K8fvQFVyWyQ66Jkg4gwbWP","Name":"Non-ML Snake","URL":"","Body":[{"X":6,"Y":4},{"X":5,"Y":4},{"X":4,"Y":4},{"X":4,"Y":5},{"X":5,"Y":5},{"X":6,"Y":5}],"Health":65,"Death":null,"Color":"#660B04","HeadType":"sand-worm","TailType":"freckled","Latency":"423","Shout":"","Team":""},{"ID":"gs_7SwWgqKyPb9r4JyMMCVgM479","Name":"Dennis","URL":"","Body":[{"X":4,"Y":8},{"X":4,"Y":7},{"X":3,"Y":7},{"X":3,"Y":6},{"X":2,"Y":6},{"X":1,"Y":6},{"X":0,"Y":6},{"X":0,"Y":5},{"X":1,"Y":5},{"X":2,"Y":5},{"X":2,"Y":4},{"X":3,"Y":4}],"Health":94,"Death":null,"Color":"#192821","HeadType":"evil","TailType":"freckled","Latency":"122","Shout":"","Team":""},{"ID":"gs_QKMg3jTBFTMGSV3CdmqwHMdC","Name":"huntail","URL":"","Body":[{"X":2,"Y":8},{"X":2,"Y":7},{"X":1,"Y":7},{"X":1,"Y":8},{"X":0,"Y":8},{"X":0,"Y":9},{"X":1,"Y":9},{"X":2,"Y":9},{"X":3,"Y":9},{"X":3,"Y":8}],"Health":83,"Death":null,"Color":"#d897cb","HeadType":"tongue","TailType":"round-bum","Latency":"222","Shout":"","Team":""},{"ID":"gs_tQv4VvP7mFYhFPBtth4fG6XC","Name":"snake_and_bake","URL":"","Body":[{"X":9,"Y":7},{"X":8,"Y":7},{"X":7,"Y":7},{"X":7,"Y":6},{"X":7,"Y":5},{"X":8,"Y":5},{"X":8,"Y":4},{"X":9,"Y":4},{"X":9,"Y":5}],"Health":96,"Death":null,"Color":"#58D68D","HeadType":"fang","TailType":"hook","Latency":"10","Shout":"","Team":""}]}""")
         self.assertEqual(logic.getMove(mock), ("right", logic.Mode.defend), msg=str(structures.Game(mock, mock["you"]["id"])))
-
+   
     # DEFEND DOWN
 
     def test_defend_down(self):
