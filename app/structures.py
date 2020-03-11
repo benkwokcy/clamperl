@@ -204,7 +204,7 @@ class Game:
                 self.setState(enemyMoves[0], State.ENEMY_HEAD_AREA_WEAK_AND_STUCK)
             else:
                 for move in enemyMoves:
-                    if self.me.head.distance(move) == 1 and State.getSideOrMiddle(self.me.head, self.height) == State.EMPTY_MIDDLE and State.getSideOrMiddle(enemy.head, self.height) == State.EMPTY_SIDE:
+                    if enemy.size < self.me.size and self.me.head.distance(move) == 1 and State.getSideOrMiddle(self.me.head, self.height) == State.EMPTY_MIDDLE and State.getSideOrMiddle(enemy.head, self.height) == State.EMPTY_SIDE:
                         self.setState(move, State.ENEMY_HEAD_AREA_WEAK_AND_STUCK)
                     else:
                         self.setState(move, State.getHeadState(self.me, enemy))
