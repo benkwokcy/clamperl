@@ -69,6 +69,10 @@ class Snake:
         self.size = len(body)
         self.health = data["health"]
         self.ate = (self.size >= 2) and (body[-1] == body[-2]) # just ate food so there is a body part on top of the tail
+        self.data = data
+    
+    def copy(self):
+        return Snake(self.data)
 
 class Direction(Enum):
     """The /move endpoint expects a string of this form."""
@@ -275,27 +279,41 @@ class Game:
         Bad means we are not safely connected to our tail and the safe area is smaller
         than us."""
 
-        def moveSnake(p: Point, snake: Snake, isSelf: bool) -> Point:
-            # moves snake one move on board
-            states = {
-                "tail": State.SELF_TAIL if isSelf else State.ENEMY_TAIL,
-                "body": State.SELF_BODY if isSelf else State.ENEMY_BODY,
-                "head": State.SELF_HEAD if isSelf else State.ENEMY_HEAD,
-            }
+        def moveSelf(p: Point) -> Point:
+            # moves my snake one move on board and modifies the snake object
+            if self.me.ate and self.getState(p) != State.FOOD:
+                self.setState(self.me.tail, State.SELF_TAIL, overrideRisk=True)
+            if not self.me.ate:
+                self.setState(self.me.tail, State.EMPTY_MIDDLE, overrideRisk=True)
+                if self.getState(p) != State.FOOD:
+                    self.setState(self.me.middle[-1], State.SELF_TAIL, overrideRisk=True)
+
+            self.me.tail = self.me.middle[-1]
+            if self.getState(p) != State.FOOD:
+                self.me.middle.pop()
+
+            self.setState(p, State.SELF_HEAD, overrideRisk=True)            
+            self.setState(self.me.head, State.SELF_BODY, overrideRisk=True)
+
+            self.me.middle.insert(0, self.me.head)
+            self.me.head = p
+            self.me.body = [self.me.head] + self.me.middle + [self.me.tail]
+
+        def moveEnemy(p: Point, snake: Snake) -> Point:
+            # moves enemy snake one move on board
             tail = snake.tail
 
             if snake.ate and self.getState(p) != State.FOOD:
-                self.setState(snake.tail, states["tail"], overrideRisk=True)
+                self.setState(snake.tail, State.ENEMY_TAIL, overrideRisk=True)
             if not snake.ate:
                 self.setState(snake.tail, State.EMPTY_MIDDLE, overrideRisk=True)
                 if self.getState(p) != State.FOOD:
-                    self.setState(snake.middle[-1], states["tail"], overrideRisk=True)
+                    self.setState(snake.middle[-1], State.ENEMY_TAIL, overrideRisk=True)
                     tail = snake.middle[-1]
-            self.setState(p, states["head"], overrideRisk=True)
-            self.setState(snake.head, states["body"], overrideRisk=True)
-            if not isSelf:
-                for m in self.getMoves(p, Mood.RISKY):
-                    self.setState(m, State.getHeadState(self.me, snake))
+            self.setState(p, State.ENEMY_HEAD, overrideRisk=True)
+            self.setState(snake.head, State.ENEMY_BODY, overrideRisk=True)
+            for m in self.getMoves(p, Mood.RISKY):
+                self.setState(m, State.getHeadState(self.me, snake))
 
             return tail
 
@@ -305,13 +323,14 @@ class Game:
         
         # we need to restore the original board before we return
         originalBoard = [row[:] for row in self.board]
+        originalMe = self.me.copy()
 
         # reset head areas and move my snake
         for row in range(self.height): 
             for col in range(self.width):
                 if self.board[row][col] in (State.ENEMY_HEAD_AREA_WEAK, State.ENEMY_HEAD_AREA_EQUAL, State.ENEMY_HEAD_AREA_STRONG, State.ENEMY_HEAD_AREA_MULTIPLE_STRONG_OR_EQUAL):
                     self.board[row][col] = State.EMPTY_MIDDLE # doesn't matter if it is state.empty_side because we only care about safe vs risky
-        myTail = moveSnake(move, self.me, True)
+        moveSelf(move)
 
         # print(f"Future: {self.directionFromHead(move)} INITIAL SETUP") # TODO
         # print(self)
@@ -347,6 +366,7 @@ class Game:
             # we've looked at all enemy moves (but not all permutations) and none are super bad, so return
             if totalMovesUnexplored == 0 and iteration != 0:
                 self.board = originalBoard
+                self.me = originalMe
                 return (0.0, isTailReachable, isEnemyTailReachable, riskyAreaSize)
 
             # move all enemies who aren't stuck
@@ -378,7 +398,7 @@ class Game:
                     else:
                         removeSnake(other)
                 else:
-                    enemyTail = moveSnake(enemyMove, enemy, False)
+                    enemyTail = moveEnemy(enemyMove, enemy)
                     heads[enemyMove] = enemy
                     enemyTails.add(enemyTail)
 
@@ -390,6 +410,7 @@ class Game:
 
             if not isTailReachable and len(safeArea) <= self.me.size:
                 self.board = originalBoard
+                self.me = originalMe
                 if not isEnemyTailReachable:
                     if len(safeArea) <= self.me.size / 2:
                         return (7, isTailReachable, isEnemyTailReachable, riskyAreaSize)
@@ -402,6 +423,7 @@ class Game:
             self.board = [row[:] for row in newBoard]
 
         self.board = originalBoard
+        self.me = originalMe
         return (0, isTailReachable, isEnemyTailReachable, riskyAreaSize)
     
     def floodFill(self, p: Point, mood: Mood, maxPathLength=float("inf"), maxAreaLength=float("inf")) -> Set[Point]:
