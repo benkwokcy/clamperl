@@ -113,7 +113,7 @@ def defend(game: structures.Game) -> str:
         finalRisk = max(currentRisk, futureRisk)
         
         # HACK - Reverse boolean values because we want the min key value
-        return (finalRisk, not isTailConnected, not isEnemyTailConnected, -areaSize)
+        return (finalRisk, not isTailConnected, not isEnemyTailConnected, -areaSize, not g.getState(p) == structures.State.ENEMY_HEAD_AREA_WEAK_AND_STUCK)
     
     bestMoves = [(_key(m, game), game.directionFromHead(m)) for m in moves]
     bestMove = min(bestMoves)[1]
