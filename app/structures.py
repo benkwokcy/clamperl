@@ -200,11 +200,14 @@ class Game:
         # enemies
         for enemy in self.enemies:
             enemyMoves = self.getMoves(enemy.head, Mood.RISKY)
-            if len(enemyMoves) == 1 and enemy.size < self.me.size:
+            if enemy.size < self.me.size and len(enemyMoves) == 1:
                 self.setState(enemyMoves[0], State.ENEMY_HEAD_AREA_WEAK_AND_STUCK)
             else:
                 for move in enemyMoves:
-                    self.setState(move, State.getHeadState(self.me, enemy))
+                    if self.me.head.distance(move) == 1 and State.getSideOrMiddle(self.me.head, self.height) == State.EMPTY_MIDDLE and State.getSideOrMiddle(enemy.head, self.height) == State.EMPTY_SIDE:
+                        self.setState(move, State.ENEMY_HEAD_AREA_WEAK_AND_STUCK)
+                    else:
+                        self.setState(move, State.getHeadState(self.me, enemy))
             self.setState(enemy.head, State.ENEMY_HEAD)
             self.setStates(enemy.middle, State.ENEMY_BODY)
             self.setState(enemy.tail, State.ENEMY_BODY if enemy.ate else State.ENEMY_TAIL, overrideRisk=True) # if just ate, the tail has a body part on top of it
@@ -413,9 +416,9 @@ class Game:
                 self.me = originalMe
                 if not isEnemyTailReachable:
                     if len(safeArea) <= self.me.size / 2:
-                        return (7, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+                        return (5.5, isTailReachable, isEnemyTailReachable, riskyAreaSize)
                     else:
-                        return (6, isTailReachable, isEnemyTailReachable, riskyAreaSize)
+                        return (5, isTailReachable, isEnemyTailReachable, riskyAreaSize)
                 else:
                     return (4.5, isTailReachable, isEnemyTailReachable, riskyAreaSize)
 
@@ -531,6 +534,8 @@ class Game:
                 return "-"
             elif state == State.ENEMY_HEAD_AREA_WEAK:
                 return "_"
+            elif state == State.ENEMY_HEAD_AREA_WEAK_AND_STUCK:
+                return "~"
             else:
                 return " "
 
