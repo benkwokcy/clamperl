@@ -547,7 +547,7 @@ class Game:
         for i, row in enumerate(self.board):
             result.append(indices[i] + " [" + "|".join([symbol(state) for state in row]) + "]")
         result.append(f"Health: {self.me.health}")
-        result.append(f"Size: {self.me.size}")
+        result.append(f"Size: {self.me.size}, Others: {','.join([str(e.size) for e in self.enemies])}")
 
         return "\n".join(result)
 

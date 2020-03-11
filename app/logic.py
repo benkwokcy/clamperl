@@ -9,7 +9,6 @@ from app import structures
 
 class Mode(Enum):
     """These values are used in test.py to see if the snake is doing what I expect."""
-    hungry = auto()
     grow = auto()
     defend = auto()
     random = auto()
@@ -21,11 +20,9 @@ def getMove(data: dict, snakeID: str = None) -> (structures.Direction, Mode):
     game = structures.Game(data, snakeID)
 
     # Eat when food dips below threshold or our size is smaller than the average enemy
-    smallerThanAverage = game.enemies and (game.me.size <= max(game.enemies, key=lambda e: e.size).size)
-    if game.me.health < 50 or smallerThanAverage:
-        move = eat(game)
-        if move:
-            return (move, Mode.hungry if game.me.health < 50 else Mode.grow)
+    move = eat(game)
+    if move:
+        return (move, Mode.grow)
 
     # Take the safest move.
     move = defend(game)
@@ -42,16 +39,20 @@ def eat(game: structures.Game) -> str:
     
     firstMoveMood = structures.Mood.SAFE 
     remainingMoveMood = structures.Mood.SAFE
+    canKill = any([game.getState(m) == structures.State.ENEMY_HEAD_AREA_WEAK_AND_STUCK for m in game.getMoves(game.me.head, structures.Mood.SAFE)])
 
     def skipFood(point: structures.Point, distance: int, game: structures.Game):
-        if any([point.distance(s.head) * 2 <= point.distance(game.me.head) for s in game.enemies]) and game.me.health > 10:
-            return True # if we are not starving and the food is 2x closer to another enemy, ignore this food.
-        if any([point.distance(s.head) == 2 and point.distance(game.me.head) == 2 and s.size >= game.me.size for s in game.enemies]):
-            return True # if a equal/bigger enemy is also 2 moves from food, ignore this food.
-        
+        if game.me.health > 50 and max(game.enemies, key=lambda x: x.size).size < game.me.size and (distance > 3 or canKill):
+            return True
+        for s in game.enemies:
+            if point.distance(s.head) * 2 <= point.distance(game.me.head) and game.me.health > 10:
+                return True # if we are not starving and the food is 2x closer to another enemy, ignore this food.
+            if point.distance(s.head) == 2 and point.distance(game.me.head) == 2 and s.size >= game.me.size:
+                return True # if a equal/bigger enemy is also 2 moves from food, ignore this food.
+
         return False
 
-    food = game.foodPerimeter(firstMoveMood, remainingMoveMood, min(game.height, game.me.health))
+    food = game.foodPerimeter(firstMoveMood, remainingMoveMood, maxPathLength=game.height)
 
     moves = []
     for foodPoint, pathLength, firstMove in food:
