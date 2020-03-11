@@ -27,7 +27,12 @@ class Point:
         return Point({"x": self.x, "y": self.y+1})
     
     def neighbours(self):
-        return {self.left(), self.right(), self.up(), self.down()}
+        return {
+            Point({"x": self.x-1, "y": self.y}), 
+            Point({"x": self.x+1, "y": self.y}), 
+            Point({"x": self.x, "y": self.y-1}), 
+            Point({"x": self.x, "y": self.y+1})
+        }
 
     def distance(self, other) -> int:
         """Manhattan distance between this point and another point."""
@@ -57,6 +62,7 @@ class Snake:
         body = data["body"]
         self.id = data["id"]
         self.name = data["name"]
+        self.body = [Point(c) for c in body]
         self.head = Point(body[0])
         self.tail = Point(body[-1])
         self.middle = [ Point(c) for c in body[1:-1] ]
@@ -117,8 +123,8 @@ def getRisk(state: State) -> int:
     risk = {
         # SAFE
         State.FOOD: 0,
-        State.SELF_TAIL: 2,
         State.ENEMY_HEAD_AREA_WEAK_AND_STUCK: 1,
+        State.SELF_TAIL: 2,
         State.EMPTY_MIDDLE: 2,
         State.ENEMY_HEAD_AREA_WEAK: 2, # head on collision will kill the other snake.
         State.ENEMY_TAIL: 3,
@@ -162,7 +168,6 @@ class Game:
         self.me = None
         self.enemies = []
         self.food = []
-        self.ufSafe = UnionFind(self.board) # connected areas
         self.ufRisky = UnionFind(self.board) # connected areas
 
         # board
@@ -200,23 +205,13 @@ class Game:
             self.setStates(enemy.middle, State.ENEMY_BODY)
             self.setState(enemy.tail, State.ENEMY_BODY if enemy.ate else State.ENEMY_TAIL, overrideRisk=True) # if just ate, the tail has a body part on top of it
 
-        # calculate reachable areas
-        # NOTE: this only unions safe/risky moves from my head's possible moves.
+        # calculate reachable areas from my head
         # It *DOES NOT* include any heads or bodies. Do not try to see if these are connected.
         # Squares on either side of my head are not connected through my head.
-
-        validMoves = self.getMoves(self.me.head, Mood.SAFE)
-        validMoves.append(self.me.tail)
-        for move in validMoves:
-            if self.ufSafe.getSize(move) == 1:
-                points = self.floodFill(move, Mood.SAFE, self.me.size+2)
-                for p in points:
-                    self.ufSafe.union(p, move)
-
         validMoves = self.getMoves(self.me.head, Mood.RISKY)
         for move in validMoves:
             if self.ufRisky.getSize(move) == 1:
-                points = self.floodFill(move, Mood.RISKY, self.me.size+2)
+                points = self.floodFill(move, Mood.RISKY, maxAreaLength=self.me.size*2)
                 for p in points:
                     self.ufRisky.union(p, move)
 
@@ -388,12 +383,7 @@ class Game:
                     enemyTails.add(enemyTail)
 
             # calculate metrics
-            safeArea = self.floodFill(move, Mood.SAFE, maxPathLength = self.me.size + 1)
-
-            if not any([t in safeArea for t in enemyTails]):
-                isEnemyTailReachable = False
-            if myTail not in safeArea:
-                isTailReachable = False
+            safeArea, isTailReachable, isEnemyTailReachable = self.floodSafeArea(move, enemyTails, maxPathLength = self.me.size + 2)
 
             # print(f"Future: {self.directionFromHead(move)}, safeArea={len(safeArea)}, meSize={self.me.size}, isTailReachable={isTailReachable}, isEnemyTailReachable={isEnemyTailReachable}") # TODO
             # print(self)
@@ -414,22 +404,63 @@ class Game:
         self.board = originalBoard
         return (0, isTailReachable, isEnemyTailReachable, riskyAreaSize)
     
-    def floodFill(self, p: Point, mood: Mood, maxPathLength=float("inf")) -> Set[Point]:
+    def floodFill(self, p: Point, mood: Mood, maxPathLength=float("inf"), maxAreaLength=float("inf")) -> Set[Point]:
         """We count weak head areas that form choke points as risky."""
         seen = set([p])
         queue = deque([(p,1)])
 
         while queue:
+            if len(seen) > maxAreaLength:
+                return seen
             curr,dist = queue.popleft()
             if dist < maxPathLength:
                 for neighbour in self.getMoves(curr, mood):
-                    if mood == Mood.SAFE and self.getState(neighbour) == State.ENEMY_HEAD_AREA_WEAK and dist > 1 and any([getRisk(self.getState(s)) > Mood.RISKY.value for s in self.getMoves(neighbour, Mood.ALL)]):
-                        continue
                     if neighbour not in seen:
+                        if mood == Mood.SAFE and self.getState(neighbour) == State.ENEMY_HEAD_AREA_WEAK and dist > 1 and any([getRisk(self.getState(s)) > Mood.RISKY.value for s in self.getMoves(neighbour, Mood.ALL)]):
+                            continue
                         seen.add(neighbour)
                         queue.append((neighbour, dist+1))
 
         return seen
+
+    def floodSafeArea(self, p: Point, enemyTails, maxPathLength=float("inf")):
+        """We can calculate whether a body part will move out of the way or not"""
+        seen = set([p])
+        queue = deque([(p,1)])
+        hasEnemyTail = False
+        hasMyTail = False
+
+        while queue:
+            curr,dist = queue.popleft()
+            if curr == self.me.tail:
+                hasMyTail = True
+            elif curr in enemyTails:
+                hasEnemyTail = True
+            if hasMyTail and hasEnemyTail and len(seen) > self.me.size:
+                return (seen, hasMyTail, hasEnemyTail)
+            if dist < maxPathLength:
+                for neighbour in self.getMoves(curr, Mood.ALL):
+                    if neighbour not in seen:
+                        neighbourState = self.getState(neighbour)
+                        if neighbourState == State.ENEMY_HEAD_AREA_WEAK and dist > 1 and any([getRisk(self.getState(s)) > Mood.RISKY.value for s in self.getMoves(neighbour, Mood.ALL)]):
+                            continue # risky choke point
+                        if getRisk(neighbourState) > Mood.SAFE.value: # consider whether a part of my body will move out of the way by the time I get there
+                            if neighbourState == State.SELF_BODY:
+                                index = self.me.body.index(neighbour)
+                                movesFromTail = 3
+                                if (index >= self.me.size - movesFromTail and 
+                                        (not self.me.ate and dist > (self.me.size - 1 - index) or 
+                                        self.me.ate and dist > (self.me.size - index))):
+                                    seen.add(neighbour)
+                                    queue.append((neighbour, dist+1))
+                                else:
+                                    continue
+                            else:
+                                continue
+                        seen.add(neighbour)
+                        queue.append((neighbour, dist+1))
+
+        return (seen, hasMyTail, hasEnemyTail)
 
     def foodPerimeter(self, firstMoveMood: Mood, pathMood: Mood, maxPathLength: int):
         """Get food reachable from the head within a certain path length and mood constraint."""
@@ -448,49 +479,13 @@ class Game:
                 food.append((curr,dist,parent))
             if dist < maxPathLength:
                 for neighbour in self.getMoves(curr, pathMood):
-                    if pathMood == Mood.SAFE and self.getState(neighbour) == State.ENEMY_HEAD_AREA_WEAK and neighbour.distance(self.me.head) > 1 and any([getRisk(self.getState(s)) > Mood.RISKY.value for s in self.getMoves(neighbour, Mood.ALL)]):
-                        continue
                     if neighbour not in seen:
+                        if pathMood == Mood.SAFE and self.getState(neighbour) == State.ENEMY_HEAD_AREA_WEAK and neighbour.distance(self.me.head) > 1 and any([getRisk(self.getState(s)) > Mood.RISKY.value for s in self.getMoves(neighbour, Mood.ALL)]):
+                            continue
                         seen.add(neighbour)
                         queue.append((neighbour, dist+1, parent))
 
         return food
-
-    # def aStar(self, source: Point, dest: Point, pathMood: Mood, targetPathLength: int) -> List[Point]:
-    #     """Figures out the shortest path to a destination."""
-
-    #     # def getPath(parent: Dict[Point, Point], dest: Point) -> List[Point]:
-    #     #     """Reconstruct path from a parent pointer array.
-    #     #     Path returned does not include the source.
-    #     #     """
-    #     #     path = []
-
-    #     #     p = dest
-    #     #     while parent[p] != source:
-    #     #         path.append(p)
-    #     #         p = parent[p]
-
-    #     #     path.append(p)
-
-    #     #     return path[::-1]
-
-    #     heap = [(dest.distance(source), source)]
-    #     pathCost = {source.tup: 0} # path cost so far from destination
-    #     parent = {source: source} # the point preceding another point in the path
-
-    #     while heap:
-    #         _, move = heapq.heappop(heap)
-    #         if move == dest and pathCost[move.tup] == targetPathLength:
-    #             return True # path found
-    #         if pathCost[move.tup] + move.distance(dest) > maxPathLength:
-    #             continue
-    #         for neighbour in self.getMoves(move, pathMood):
-    #             if neighbour.tup not in pathCost or pathCost[move.tup] + 1 < pathCost[neighbour.tup]:
-    #                 parent[neighbour] = move
-    #                 pathCost[neighbour.tup] = pathCost[move.tup] + 1
-    #                 heapq.heappush(heap, (pathCost[neighbour.tup] + dest.distance(neighbour), neighbour))
-
-    #     return False # no path to destination
 
     def __str__(self) -> str:
         """Overrides the print representation."""
@@ -528,6 +523,18 @@ class Game:
         result.append(f"Size: {self.me.size}")
 
         return "\n".join(result)
+
+    def printUF(self, uf) -> str:
+        """Overrides the print representation."""
+        assert self.height < 36, "Indices don't go that high in string representation, please extend indices."
+        indices = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
+
+        result = ["\n"]
+        result.append("   " + " ".join(indices[:self.height]))
+        for i, row in enumerate(self.board):
+            result.append(indices[i] + " [" + "|".join([str(uf.getSize(Point({"x": j, "y": i}))) for j,_ in enumerate(row)]) + "]")
+
+        print("\n".join(result))
 
 class UnionFind:
     """Weighted UnionFind with Path Compression.

@@ -21,7 +21,7 @@ def getMove(data: dict, snakeID: str = None) -> (structures.Direction, Mode):
     game = structures.Game(data, snakeID)
 
     # Eat when food dips below threshold or our size is smaller than the average enemy
-    smallerThanAverage = game.enemies and (game.me.size < max(game.enemies, key=lambda e: e.size).size) # TODO
+    smallerThanAverage = game.enemies and (game.me.size <= max(game.enemies, key=lambda e: e.size).size)
     if game.me.health < 50 or smallerThanAverage:
         move = eat(game)
         if move:
@@ -44,14 +44,10 @@ def eat(game: structures.Game) -> str:
     remainingMoveMood = structures.Mood.SAFE
 
     def skipFood(point: structures.Point, distance: int, game: structures.Game):
-        if game.ufSafe.getSize(point) < game.me.size and game.me.health > 25: # TODO - I don't actually UF these!!
-            return True # if we are not very hungry and the areas is smaller than us, ignore this food.
         if any([point.distance(s.head) * 2 <= point.distance(game.me.head) for s in game.enemies]) and game.me.health > 10:
-            return True # if we are not starving and the food is 3x closer to another enemy, ignore this food.
+            return True # if we are not starving and the food is 2x closer to another enemy, ignore this food.
         if any([point.distance(s.head) == 2 and point.distance(game.me.head) == 2 and s.size >= game.me.size for s in game.enemies]):
             return True # if a equal/bigger enemy is also 2 moves from food, ignore this food.
-        if game.me.size > 13 and game.me.health > 25 and not game.ufSafe.connected(point, game.me.tail): # TODO
-            return True # if i'm getting very long and not that hungry, prefer to stay by my tail
         
         return False
 
@@ -68,6 +64,8 @@ def eat(game: structures.Game) -> str:
     while moves:
         _, move = heapq.heappop(moves)
         futureRisk, isTailConnected, isEnemyTailConnected, _ = game.simulateMove(move, 1)
+        if game.me.size > 13 and game.me.health > 25 and not isTailConnected:
+            continue
         if game.me.health > 20 and not (futureRisk <= structures.Mood.SAFE.value or isTailConnected or isEnemyTailConnected):
             continue
         return game.directionFromHead(move)
@@ -81,15 +79,28 @@ def defend(game: structures.Game) -> str:
         return None
 
     def tailChaseBuster(p, g):
+        """Identify larger snakes who can intercept me chasing my tail from 2-3 moves away"""
+
+        def isThreeMovesAway(source, destination, game):
+            destinationNeighbours = [d for d in destination.neighbours() if d.distance(source) == 2]
+            moves = game.getMoves(source, structures.Mood.RISKY)
+            moves = [m for m in moves if destination.distance(m) == 2]
+            for m in moves:
+                for p in game.getMoves(m, structures.Mood.RISKY):
+                    if p in destinationNeighbours:
+                        return True
+            
+            return False
+
         if g.getState(p) == structures.State.SELF_TAIL and g.me.size > 5:
             twoMovesAway = g.me.middle[-1]
-            # threeMovesAway = g.me.middle[-2]
+            threeMovesAway = g.me.middle[-2]
             for e in g.enemies:
                 if e.size > g.me.size and e.head.distance(g.me.head) <= 6:
                     if e.head.distance(twoMovesAway) == 2 and set(g.getMoves(e.head, structures.Mood.RISKY)).intersection(twoMovesAway.neighbours()):
                         return True
-                    # if e.head.distance(threeMovesAway) == 3 and any([g.ufRisky.connected(threeMovesAway, m) for m in g.getMoves(e.head, structures.Mood.RISKY)]):
-                    #     return True
+                    if e.head.distance(threeMovesAway) == 3 and isThreeMovesAway(e.head, threeMovesAway, game):
+                        return True
 
     def _key(p: structures.Point, g: structures.Game):
         if tailChaseBuster(p,g):
