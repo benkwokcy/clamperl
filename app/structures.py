@@ -406,7 +406,7 @@ class Game:
                     enemyTails.add(enemyTail)
 
             # calculate metrics
-            safeArea, isTailReachable, isEnemyTailReachable = self.floodSafeArea(move, enemyTails, maxPathLength = self.me.size + 2)
+            safeArea, isTailReachable, isEnemyTailReachable = self.floodSafeArea(move, enemyTails, maxPathLength = min(self.me.size + 2, self.height * 1.5))
 
             # print(f"Future: {self.directionFromHead(move)}, safeArea={len(safeArea)}, meSize={self.me.size}, isTailReachable={isTailReachable}, isEnemyTailReachable={isEnemyTailReachable}") # TODO
             # print(self)

@@ -65,11 +65,12 @@ def eat(game: structures.Game) -> str:
     while moves:
         _, move = heapq.heappop(moves)
         futureRisk, isTailConnected, isEnemyTailConnected, _ = game.simulateMove(move, 1)
+        moveString = game.directionFromHead(move)
         if game.me.size > 13 and game.me.health > 25 and not isTailConnected:
             continue
         if game.me.health > 20 and not (futureRisk <= structures.Mood.SAFE.value or isTailConnected or isEnemyTailConnected):
             continue
-        return game.directionFromHead(move)
+        return moveString
 
     return None
 
