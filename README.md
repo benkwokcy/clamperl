@@ -1,6 +1,6 @@
-# huntail
+# huntail-python
 
-A snake AI for Battlesnake 2020.
+#### NOTE: This version is obsolete, see the rewrite in Java at https://github.com/benkwokcy/huntail
 
 ## About
 
