@@ -2,7 +2,7 @@
 
 #### NOTE: This version is obsolete, see the rewrite in Java at https://github.com/benkwokcy/huntail
 
-A snake AI for Battlesnake 2020, using Python 3.7, Bottle, and Heroku. The snake runs on one thread in a Heroku hobby dyno. It calculates at most one move into the future, the rest is heuristic-based.
+A snake AI for Battlesnake 2020, using Python 3.7, Bottle, and Heroku. The snake runs on one thread in a Heroku hobby dyno. It calculates at most one move into the future, the rest is heuristic-based. This version is peaking at rank 18 out of 160 snakes on the online arena.
 
 ## File Structure
 
