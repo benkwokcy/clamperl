@@ -2,9 +2,7 @@
 
 #### NOTE: This version is obsolete, see the rewrite in Java at https://github.com/benkwokcy/huntail
 
-## About
-
-The snake runs on one thread in a Heroku hobby dyno. It relies on heuristics rather than by enumerating future states. My main workflow is to watch arena games where the snake loses, find the board state where it went wrong, think about what move I would have made, turn that board state into a test case, and tweak the heuristics until it passes. If you want to change the snake's strategy and tests start failing, feel free to change the tests so they adhere to the strategy you have in mind!
+A snake AI for Battlesnake 2020, using Python 3.7, Bottle, and Heroku. The snake runs on one thread in a Heroku hobby dyno. It calculates at most one move into the future, the rest is heuristic-based.
 
 ## File Structure
 
